@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ---
 import '../styles/global.css';
 ---
@@ -16,6 +17,24 @@ import '../styles/global.css';
         <input type="password" id="pat" placeholder="GitHub PAT" />
         <button id="submit">Einloggen</button>
         <div id="error" class="error"></div>
+=======
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  </head>
+  <body class="bg-gray-50 min-h-screen flex items-center justify-center font-sans">
+    <main class="w-full flex items-center justify-center">
+      <div class="bg-white shadow-md px-8 py-10 w-full max-w-md flex flex-col items-center">
+        <h1 class="text-2xl font-bold mb-2 tracking-tight">Login</h1>
+        <p class="text-gray-600 text-base mb-6 text-center">Gib deinen GitHub Personal Access Token ein, um den Bearbeitungsmodus zu aktivieren.</p>
+        <input type="password" id="pat" placeholder="GitHub PAT" class="w-full mb-4 px-4 py-3 border border-gray-200 bg-gray-50 focus:outline-none focus:border-black text-gray-900 text-base transition" />
+        <button id="submit" class="w-full bg-black hover:bg-gray-900 text-white font-semibold py-3 transition mb-2">Einloggen</button>
+        <div id="error" class="text-red-600 text-sm min-h-[1.5em] mt-2"></div>
+>>>>>>> test
       </div>
     </main>
     <script type="module">
@@ -26,7 +45,11 @@ import '../styles/global.css';
       submitButton.addEventListener('click', async () => {
         const pat = patInput.value.trim();
         if (!pat) {
+<<<<<<< HEAD
           errorDiv.textContent = 'Bitte geben Sie einen Token ein.';
+=======
+          errorDiv.textContent = 'Bitte gib einen Personal Access Token ein.';
+>>>>>>> test
           return;
         }
 
@@ -36,6 +59,7 @@ import '../styles/global.css';
           });
           if (response.ok) {
             sessionStorage.setItem('github_pat', pat);
+<<<<<<< HEAD
             window.location.href = '/astro-edit-starter';
           } else {
             errorDiv.textContent = 'Ungültiger PAT.';
@@ -57,5 +81,16 @@ import '../styles/global.css';
         margin-top: 1em;
       }
     </style>
+=======
+            window.location.href = '/astro-edit-starter/';
+          } else {
+            errorDiv.textContent = 'Ungültiger PAT. Bitte versuche es erneut.';
+          }
+        } catch (error) {
+          errorDiv.textContent = 'Ein Fehler ist aufgetreten. Überprüfe deine Verbindung.';
+        }
+      });
+    </script>
+>>>>>>> test
   </body>
 </html>

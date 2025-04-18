@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 body {
   font-family: Arial, sans-serif;
   margin: 0;
@@ -21,3 +22,6 @@ body {
 section {
   padding: 1em;
 }
+=======
+@import "tailwindcss";
+>>>>>>> test

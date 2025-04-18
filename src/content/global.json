@@ -1,0 +1,37 @@
+{
+  "hero": {
+    "title": "Willkommen auf unserer Seite",
+    "subtitle": "Wir bieten innovative Lösungen für Ihre Bedürfnisse",
+    "cta": "Mehr erfahren",
+    "image": "/astro-edit-starter/images/hero.jpg"
+  },
+  "about": {
+    "title": "Über Uns",
+    "content": "Wir sind ein engagiertes Team von Experten, die sich darauf konzentrieren, qualitativ hochwertige Lösungen zu liefern. Mit jahrelanger Erfahrung in der Branche setzen wir uns für den Erfolg unserer Kunden ein.",
+    "image": "/astro-edit-starter/images/about.jpg"
+  },
+  "features": [
+    {
+      "title": "Qualität",
+      "description": "Wir legen großen Wert auf Qualität und Präzision bei allem, was wir tun.",
+      "icon": "stars"
+    },
+    {
+      "title": "Innovation",
+      "description": "Wir sind stets bestrebt, innovative Lösungen zu finden und neue Wege zu gehen.",
+      "icon": "lightbulb"
+    },
+    {
+      "title": "Kundenzufriedenheit",
+      "description": "Die Zufriedenheit unserer Kunden steht für uns an erster Stelle.",
+      "icon": "users"
+    }
+  ],
+  "contact": {
+    "title": "Kontakt",
+    "description": "Haben Sie Fragen? Kontaktieren Sie uns!",
+    "email": "info@example.com",
+    "phone": "+49 123 456789",
+    "address": "Musterstraße 123, 12345 Berlin"
+  }
+}
