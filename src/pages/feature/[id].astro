@@ -68,7 +68,7 @@ const repo = 'knuspermixx/astro-edit-starter'; // Repository Name für API Calls
   </footer>
 </Layout>
 
-<script type="module" define:vars={{ initialDataString, featureIndex, base, repo }}>
+<script type="module" define:vars={{ initialDataString, featureIndex, base, repo, id }}> // <-- id hinzugefügt
   // Initialer Zustand wird jetzt über define:vars übergeben und hier geparst
   const initialData = JSON.parse(initialDataString);
   let currentData = JSON.parse(initialDataString); // Aktueller Bearbeitungszustand (gesamte Daten)
@@ -278,7 +278,7 @@ const repo = 'knuspermixx/astro-edit-starter'; // Repository Name für API Calls
       const commit = await githubApi('git/commits', {
         method: 'POST',
         body: JSON.stringify({
-          message: `Update feature ${id} details via Editor`, // Spezifischere Commit-Nachricht
+          message: `Update feature ${id} details via Editor`, // id ist jetzt hier verfügbar
           tree: newTree.sha,
           parents: [latestCommitSha]
         })
