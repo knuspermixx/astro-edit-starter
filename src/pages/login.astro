@@ -1,4 +1,5 @@
 <!doctype html>
+# Keine Änderungen notwendig
 <html lang="de">
   <head>
     <meta charset="utf-8" />
@@ -21,6 +22,11 @@
       const submitButton = document.getElementById('submit');
       const errorDiv = document.getElementById('error');
 
+      // Basis-URL aus der aktuellen URL ableiten (für Redirect)
+      // Nimmt an, dass login.astro im selben Verzeichnis oder Unterverzeichnis wie index.astro liegt
+      const pathSegments = window.location.pathname.split('/').filter(Boolean);
+      const base = pathSegments.length > 1 ? '/' + pathSegments[0] + '/' : '/'; // Einfache Annahme für Base
+
       submitButton.addEventListener('click', async () => {
         const pat = patInput.value.trim();
         if (!pat) {
@@ -28,18 +34,25 @@
           return;
         }
 
+        errorDiv.textContent = ''; // Fehler löschen
+
         try {
+          // Teste den PAT gegen die GitHub API
           const response = await fetch('https://api.github.com/user', {
             headers: { Authorization: `token ${pat}` },
           });
           if (response.ok) {
             sessionStorage.setItem('github_pat', pat);
-            window.location.href = '/astro-edit-starter/';
+            // Redirect zur Basis-URL der Seite
+             window.location.href = base; // Nutze die ermittelte Base-URL
           } else {
-            errorDiv.textContent = 'Ungültiger PAT. Bitte versuche es erneut.';
+              const data = await response.json();
+              console.error('GitHub API Fehler:', data);
+              errorDiv.textContent = `Ungültiger PAT (${response.status}). Bitte versuche es erneut.`;
           }
         } catch (error) {
-          errorDiv.textContent = 'Ein Fehler ist aufgetreten. Überprüfe deine Verbindung.';
+            console.error('Netzwerkfehler:', error);
+          errorDiv.textContent = 'Ein Fehler ist aufgetreten. Überprüfe deine Verbindung und den PAT.';
         }
       });
     </script>

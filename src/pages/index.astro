@@ -1,12 +1,17 @@
 ---
+import { base } from "astro:config/client";
 import data from "../content/data.json";
-
 import Layout from "../layouts/Layout.astro";
-const initialData = JSON.stringify(data); // Daten im Frontmatter als JSON-String
+
+// Basis-URL aus astro.config.mjs holen (wichtig für Pfadberechnungen)
+const repo = 'knuspermixx/astro-edit-starter'; // Repository Name für API Calls
+
+// Daten für den Client vorbereiten
+const initialDataString = JSON.stringify(data); // Als String übergeben
+const initialDataForClient = data; // Objekt für Pfad-Lookup
 ---
 
 <Layout>
-<!-- Toolbar -->
 <div id="toolbar" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white p-2 flex justify-center space-x-4 rounded shadow-lg z-50 hidden">
   <div>
     <button id="undo" class="px-2 py-1 hover:bg-gray-600 rounded">Rückgängig</button>
@@ -16,9 +21,9 @@ const initialData = JSON.stringify(data); // Daten im Frontmatter als JSON-Strin
     <button id="publish" class="px-2 py-1 hover:bg-gray-600 rounded">Veröffentlichen</button>
     <button id="logout" class="px-2 py-1 hover:bg-gray-600 rounded">Abmelden</button>
   </div>
+   <div id="status" class="text-sm ml-4 self-center"></div>
 </div>
 
-<!-- Navigation -->
 <nav class="py-6 border-b border-gray-200 bg-white">
   <div class="container mx-auto px-6 flex items-center justify-between">
     <div class="text-xl font-bold tracking-tight" contenteditable="false">Logo</div>
@@ -31,39 +36,36 @@ const initialData = JSON.stringify(data); // Daten im Frontmatter als JSON-Strin
   </div>
 </nav>
 
-<!-- Hero Section -->
 <section id="hero" class="py-20">
   <div class="container mx-auto px-6 flex flex-col md:flex-row items-center">
     <div class="flex flex-col w-full md:w-2/5 justify-center items-start text-center md:text-left">
-      <h1 class="text-4xl font-bold leading-tight mt-4" contenteditable="true" data-key="hero.title">{data.hero.title}</h1>
-      <p class="leading-relaxed my-6 text-gray-600" contenteditable="true" data-key="hero.subtitle">{data.hero.subtitle}</p>
-      <button class="bg-black text-white hover:bg-gray-900 py-2 px-6 transition-colors duration-300 border border-black shadow-none" contenteditable="true" data-key="hero.cta">{data.hero.cta}</button>
+      <h1 class="text-4xl font-bold leading-tight mt-4" contenteditable="false" data-key="hero.title">{data.hero.title}</h1>
+      <p class="leading-relaxed my-6 text-gray-600" contenteditable="false" data-key="hero.subtitle">{data.hero.subtitle}</p>
+      <button class="bg-black text-white hover:bg-gray-900 py-2 px-6 transition-colors duration-300 border border-black shadow-none" contenteditable="false" data-key="hero.cta">{data.hero.cta}</button>
     </div>
     <div class="w-full md:w-3/5 py-6 text-center">
-      <img class="w-full md:w-4/5 mx-auto border border-gray-200 cursor-pointer" src={data.hero.image} alt="Hero Image" data-key="hero.image" />
-      <input type="file" id="hero-image-upload" class="hidden" accept="image/*" />
+      <img class="w-full md:w-4/5 mx-auto border border-gray-200 cursor-pointer" src={data.hero.image} alt="Hero Image" data-key="hero.image" id="img-hero-image" />
+      <input type="file" id="input-hero-image" class="hidden" accept="image/*" />
     </div>
   </div>
 </section>
 
-<!-- About Section -->
 <section id="about" class="py-20 bg-gray-50">
   <div class="container mx-auto px-6 flex flex-col md:flex-row items-center md:items-start">
     <div class="w-full md:w-1/3 flex justify-center md:justify-start mb-8 md:mb-0">
-      <img src={data.about.image} alt="About Us" class="w-40 h-40 object-cover rounded-full cursor-pointer" data-key="about.image" />
-      <input type="file" id="about-image-upload" class="hidden" accept="image/*" />
+      <img src={data.about.image} alt="About Us" class="w-40 h-40 object-cover rounded-full cursor-pointer" data-key="about.image" id="img-about-image"/>
+      <input type="file" id="input-about-image" class="hidden" accept="image/*" />
     </div>
     <div class="w-full md:w-2/3 md:pl-12 flex flex-col justify-center">
-      <h2 class="text-2xl font-bold mb-4 text-left text-gray-900 tracking-tight uppercase" contenteditable="true" data-key="about.title">{data.about.title}</h2>
-      <p class="text-gray-700 mb-2 text-left leading-relaxed max-w-2xl" contenteditable="true" data-key="about.content">{data.about.content}</p>
+      <h2 class="text-2xl font-bold mb-4 text-left text-gray-900 tracking-tight uppercase" contenteditable="false" data-key="about.title">{data.about.title}</h2>
+      <p class="text-gray-700 mb-2 text-left leading-relaxed max-w-2xl" contenteditable="false" data-key="about.content">{data.about.content}</p>
     </div>
   </div>
 </section>
 
-<!-- Features Section -->
 <section id="features" class="py-16">
   <div class="container mx-auto px-6">
-    <h2 class="text-3xl font-bold text-center mb-12" contenteditable="true" data-key="features.title">Unsere Features</h2>
+    <h2 class="text-3xl font-bold text-center mb-12" contenteditable="false" data-key="features.0.title">Unsere Features</h2>
     <div class="flex flex-wrap -mx-6">
       {data.features.map((feature, index) => (
         <div class="w-full md:w-1/3 p-6">
@@ -73,8 +75,8 @@ const initialData = JSON.stringify(data); // Daten im Frontmatter als JSON-Strin
               {feature.icon === 'lightbulb' && <span contenteditable="false">💡</span>}
               {feature.icon === 'users' && <span contenteditable="false">👥</span>}
             </div>
-            <h3 class="text-xl font-medium mb-3" contenteditable="true" data-key={`features.${index}.title`}>{feature.title}</h3>
-            <p class="text-gray-600 leading-relaxed" contenteditable="true" data-key={`features.${index}.description`}>{feature.description}</p>
+            <h3 class="text-xl font-medium mb-3" contenteditable="false" data-key={`features.${index}.title`}>{feature.title}</h3>
+            <p class="text-gray-600 leading-relaxed" contenteditable="false" data-key={`features.${index}.description`}>{feature.description}</p>
           </div>
         </div>
       ))}
@@ -82,23 +84,22 @@ const initialData = JSON.stringify(data); // Daten im Frontmatter als JSON-Strin
   </div>
 </section>
 
-<!-- Contact Section -->
 <section id="contact" class="py-20 bg-white border-t border-gray-200">
   <div class="container mx-auto px-6">
-    <h2 class="text-3xl font-bold text-center mb-8 tracking-tight" contenteditable="true" data-key="contact.title">{data.contact.title}</h2>
-    <p class="text-gray-700 text-center mb-10 max-w-xl mx-auto leading-relaxed" contenteditable="true" data-key="contact.description">{data.contact.description}</p>
+    <h2 class="text-3xl font-bold text-center mb-8 tracking-tight" contenteditable="false" data-key="contact.title">{data.contact.title}</h2>
+    <p class="text-gray-700 text-center mb-10 max-w-xl mx-auto leading-relaxed" contenteditable="false" data-key="contact.description">{data.contact.description}</p>
     <div class="flex flex-col md:flex-row justify-center items-start md:space-x-8">
       <div class="w-full md:w-1/3 mb-8 md:mb-0">
         <div class="p-6 border border-gray-200 bg-white shadow-none">
           <h3 class="text-lg font-semibold mb-3 tracking-tight">Kontaktinformationen</h3>
           <div class="mb-2">
-            <p class="text-gray-800 text-sm"><strong>Email:</strong> <span contenteditable="true" data-key="contact.email">{data.contact.email}</span></p>
+            <p class="text-gray-800 text-sm"><strong>Email:</strong> <span contenteditable="false" data-key="contact.email">{data.contact.email}</span></p>
           </div>
           <div class="mb-2">
-            <p class="text-gray-800 text-sm"><strong>Telefon:</strong> <span contenteditable="true" data-key="contact.phone">{data.contact.phone}</span></p>
+            <p class="text-gray-800 text-sm"><strong>Telefon:</strong> <span contenteditable="false" data-key="contact.phone">{data.contact.phone}</span></p>
           </div>
           <div>
-            <p class="text-gray-800 text-sm"><strong>Adresse:</strong> <span contenteditable="true" data-key="contact.address">{data.contact.address}</span></p>
+            <p class="text-gray-800 text-sm"><strong>Adresse:</strong> <span contenteditable="false" data-key="contact.address">{data.contact.address}</span></p>
           </div>
         </div>
       </div>
@@ -123,7 +124,6 @@ const initialData = JSON.stringify(data); // Daten im Frontmatter als JSON-Strin
   </div>
 </section>
 
-<!-- Footer -->
 <footer class="bg-gray-100 py-8">
   <div class="container mx-auto px-6">
     <div class="text-center text-gray-600">
@@ -132,105 +132,275 @@ const initialData = JSON.stringify(data); // Daten im Frontmatter als JSON-Strin
   </div>
 </footer>
 </Layout>
-<script type="module" define:vars={{ initialData }}>
-// Initialer Zustand wird jetzt über define:vars übergeben und hier geparst
-	let currentData = JSON.parse(initialData);
-	let history = [JSON.parse(initialData)]; // Startzustand für History
-	let historyIndex = 0;
 
-  // Überprüfen, ob der Benutzer eingeloggt ist
+<script type="module" define:vars={{ initialDataString, initialDataForClient, base, repo }}>
+  // Initialer Zustand wird jetzt über define:vars übergeben und hier geparst
+  const initialData = JSON.parse(initialDataString);
+  let currentData = JSON.parse(initialDataString); // Aktueller Bearbeitungszustand
+  let history = [JSON.parse(initialDataString)]; // Startzustand für History
+  let historyIndex = 0;
+  let pendingImageUploads = {}; // Objekt für ausstehende Bild-Uploads: { repoPath: File }
+
   const pat = sessionStorage.getItem('github_pat');
+  const toolbar = document.getElementById('toolbar');
+  const statusDiv = document.getElementById('status');
+  const publishButton = document.getElementById('publish');
+
+  // --- Helper Functions ---
+  function updateStatus(message, isError = false) {
+    statusDiv.textContent = message;
+    statusDiv.style.color = isError ? 'red' : 'white';
+  }
+
+  // Konvertiert einen Pfad aus data.json in einen Repository-Pfad
+  function getRepoPath(dataPath) {
+     // Entfernt die Base-URL und führt 'public/' hinzu
+     // Annahme: Bilder in data.json sind wie /astro-edit-starter/images/name.jpg
+     // und liegen im Repo unter public/images/name.jpg
+     const relativePath = dataPath.startsWith(base) ? dataPath.substring(base.length) : dataPath;
+     return `public${relativePath.startsWith('/') ? '' : '/'}${relativePath}`;
+  }
+
+  // Konvertiert einen Data-Key (z.B. hero.image) zu einem Pfad im Repo
+  function getRepoPathFromKey(key) {
+    const pathInData = key.split('.').reduce((obj, k) => obj && obj[k], initialDataForClient);
+    if (typeof pathInData === 'string') {
+        return getRepoPath(pathInData);
+    }
+    return null; // Falls der Key kein Bildpfad ist
+  }
+
+
+  // Liest eine Datei als Base64
+  function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        // Extrahiert nur den Base64-Teil aus dem Data URL
+        const base64String = reader.result.split(',')[1];
+        resolve(base64String);
+      };
+      reader.onerror = (error) => reject(error);
+      reader.readAsDataURL(file); // Liest als Data URL, um Base64 zu erhalten
+    });
+  }
+
+   // Funktion zur sicheren Base64-Kodierung von UTF-8 Strings (für data.json)
+  function utf8ToBase64(str) {
+    try {
+      // Diese Methode ist robuster für Unicode-Zeichen als einfaches btoa()
+      return btoa(unescape(encodeURIComponent(str)));
+    } catch (e) {
+      console.error("Fehler beim Base64-Kodieren:", e);
+      // Fallback oder alternative Methode hier, falls nötig
+      // Für dieses Beispiel geben wir einen leeren String zurück oder werfen den Fehler weiter
+      // throw e; // oder return '';
+      return btoa(str); // Versuch mit Standard btoa als Fallback (kann fehlschlagen)
+    }
+  }
+
+
+  // Holt den SHA einer Datei von GitHub
+  async function getFileSha(repoPath) {
+    const url = `https://api.github.com/repos/${repo}/contents/${repoPath}`;
+    try {
+      const response = await fetch(url, {
+        headers: { Authorization: `token ${pat}` },
+      });
+      if (!response.ok) {
+        if (response.status === 404) return null; // Datei existiert nicht
+        throw new Error(`GitHub API Fehler (getFileSha ${repoPath}): ${response.status}`);
+      }
+      const data = await response.json();
+      return data.sha;
+    } catch (error) {
+      console.error("Fehler beim Abrufen des SHA:", error);
+      updateStatus(`Fehler SHA ${repoPath}: ${error.message}`, true);
+      return 'error'; // Signalisiert einen Fehler
+    }
+  }
+
+  // Lädt eine Datei auf GitHub hoch (oder aktualisiert sie)
+  async function uploadFileToGithub(repoPath, file, sha) {
+    const url = `https://api.github.com/repos/${repo}/contents/${repoPath}`;
+    try {
+      const content = await readFileAsBase64(file);
+      const body = {
+        message: `Update image ${repoPath} via editor`,
+        content: content,
+        branch: 'main',
+        sha: sha, // SHA der zu ersetzenden Datei (oder null, wenn neu)
+      };
+
+      updateStatus(`Lade hoch: ${repoPath}...`);
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          Authorization: `token ${pat}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        throw new Error(`GitHub API Fehler (uploadFile ${repoPath}): ${response.status} ${await response.text()}`);
+      }
+      updateStatus(`${repoPath} hochgeladen.`);
+      return true; // Erfolg
+    } catch (error) {
+      console.error("Fehler beim Hochladen der Datei:", error);
+      updateStatus(`Upload-Fehler ${repoPath}: ${error.message}`, true);
+      return false; // Fehler
+    }
+  }
+
+  // --- Initialisierung & Event Listeners ---
+
   if (pat) {
-    document.getElementById('toolbar').classList.remove('hidden'); // Use hidden class now
-    document.querySelectorAll('[contenteditable]').forEach(el => {
+    toolbar.classList.remove('hidden');
+    document.querySelectorAll('[contenteditable="false"][data-key]').forEach(el => {
       el.setAttribute('contenteditable', 'true');
     });
   } else {
-	document.getElementById('toolbar').classList.add('hidden'); // Ensure it's hidden if not logged in
+    toolbar.classList.add('hidden'); // Sicherstellen, dass Toolbar versteckt ist
+     document.querySelectorAll('[contenteditable="true"][data-key]').forEach(el => {
+      el.setAttribute('contenteditable', 'false'); // Bearbeitung deaktivieren
+    });
   }
 
-  // Funktion zum Speichern des aktuellen Zustands
+  // Speichern des Zustands (nur Textdaten)
   function saveState() {
+    // Tiefenkopie erstellen, um Referenzprobleme zu vermeiden
+    const stateToSave = JSON.parse(JSON.stringify(currentData));
     if (historyIndex < history.length - 1) {
       history = history.slice(0, historyIndex + 1);
     }
-    history.push(JSON.parse(JSON.stringify(currentData)));
+    history.push(stateToSave);
     historyIndex++;
   }
 
-  // Funktion zum Anwenden eines Zustands
+  // Anwenden eines Zustands (nur Textdaten)
   function applyState(state) {
     currentData = JSON.parse(JSON.stringify(state));
     document.querySelectorAll('[data-key]').forEach(el => {
       const key = el.dataset.key;
+      // Finde den Wert im aktuellen Zustand
       let value = key.split('.').reduce((obj, k) => obj && obj[k], currentData);
-      if (el.tagName === 'IMG') {
-        el.src = value;
-      } else {
-        el.textContent = value;
+
+      // Aktualisiere nur Textinhalte, keine Bilder (die haben eigene Vorschau)
+      if (el.tagName !== 'IMG') {
+         if (el.textContent !== value) { // Nur aktualisieren, wenn nötig
+             el.textContent = value;
+         }
       }
+      // Bildpfade werden nicht durch applyState geändert,
+      // da sie statisch bleiben sollen und die Vorschau separat läuft.
     });
+     // Nach ApplyState ggf. Status löschen
+     updateStatus('');
   }
 
-  // Event-Listener für Abmelden
+  // Logout
   document.getElementById('logout').addEventListener('click', () => {
     sessionStorage.removeItem('github_pat');
     window.location.reload();
   });
 
-  // Event-Listener für Bilder
+  // Klick auf Bild -> Trigger Input
   document.querySelectorAll('img[data-key]').forEach(img => {
     img.addEventListener('click', () => {
       if (!pat) return;
-      // Ersetze Punkte durch Bindestriche für die ID
-      const input = document.querySelector(`input[type="file"][id$="${img.dataset.key.replace(/\./g, '-')}-upload"]`);
-      if (input) input.click();
+      // Input-Feld basierend auf data-key finden
+       const dataKey = img.dataset.key;
+       const inputId = `input-${dataKey.replace(/\./g, '-')}`; // Punkte durch Bindestriche ersetzen
+      const input = document.getElementById(inputId);
+      if (input) {
+          input.click();
+      } else {
+          console.error(`Input-Feld mit ID ${inputId} nicht gefunden für Bild ${dataKey}`);
+      }
     });
   });
 
+  // Bild-Input Änderung
   document.querySelectorAll('input[type="file"]').forEach(input => {
     input.addEventListener('change', (event) => {
+       if (!pat) return;
       const file = event.target.files[0];
       if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = document.querySelector(`img[data-key="${input.id.replace('-upload', '').replace(/-/g, '.')}"`);              img.src = e.target.result;
-          const keyParts = input.id.replace('-upload', '').split('.');
-          let obj = currentData;
-          for (let i = 0; i < keyParts.length - 1; i++) {
-            obj = obj[keyParts[i]];
+        // Finde das zugehörige Bild-Element
+         const dataKey = input.id.replace('input-', '').replace(/-/g, '.'); // ID zurück zu data-key Format
+        const img = document.querySelector(`img[data-key="${dataKey}"]`);
+
+        if (img) {
+          // Lokale Vorschau aktualisieren
+          const objectURL = URL.createObjectURL(file);
+          img.src = objectURL;
+          // Alte Object URL freigeben, falls vorhanden (optional, zur Speicherverwaltung)
+          // if (img.dataset.objectUrl) { URL.revokeObjectURL(img.dataset.objectUrl); }
+          // img.dataset.objectUrl = objectURL; // Speichere neue URL für späteres Freigeben
+
+
+          // Originalen Repository-Pfad aus initialData holen
+          const repoPath = getRepoPathFromKey(dataKey);
+          if (repoPath) {
+              // Datei zum Hochladen vormerken
+              pendingImageUploads[repoPath] = file;
+              updateStatus(`${file.name} zum Hochladen vorgemerkt.`);
+              // Wichtig: currentData wird NICHT geändert, der Pfad bleibt gleich!
+          } else {
+              console.error(`Konnte Repository-Pfad für ${dataKey} nicht ermitteln.`);
+              updateStatus(`Fehler: Pfad für ${dataKey} nicht gefunden.`, true);
           }
-          obj[keyParts[keyParts.length - 1]] = e.target.result;
-          saveState();
-        };
-        reader.readAsDataURL(file);
+
+        } else {
+            console.error(`Bild-Element für Input ${input.id} (Key: ${dataKey}) nicht gefunden.`);
+        }
       }
     });
   });
 
-  // Event-Listener für bearbeitbare Texte
+
+  // Bearbeitbare Texte
   document.querySelectorAll('[contenteditable][data-key]').forEach(el => {
-    el.addEventListener('input', () => {
-      const keyParts = el.dataset.key.split('.');
-      let obj = currentData;
-      for (let i = 0; i < keyParts.length - 1; i++) {
-        obj = obj[keyParts[i]];
-      }
-      obj[keyParts[keyParts.length - 1]] = el.textContent;
-      saveState();
-    });
+     // Sicherstellen, dass nur Text-Elemente einen Input-Listener bekommen
+     if (el.tagName !== 'IMG') {
+         el.addEventListener('input', () => {
+             if (!pat) return;
+             const keyParts = el.dataset.key.split('.');
+             let obj = currentData;
+             try {
+                 for (let i = 0; i < keyParts.length - 1; i++) {
+                     obj = obj[keyParts[i]];
+                 }
+                 // Verhindern, dass der state durch Bearbeiten von nicht-Text Nodes kaputt geht
+                 if (typeof obj === 'object' && obj !== null && keyParts[keyParts.length-1] in obj) {
+                    obj[keyParts[keyParts.length - 1]] = el.textContent;
+                    // Nur speichern, wenn sich der Text tatsächlich geändert hat
+                    // und es sich um eine Texteigenschaft handelt
+                    saveState();
+                 } else {
+                    console.warn(`Konnte Key ${el.dataset.key} in currentData nicht sicher setzen.`);
+                 }
+             } catch(e) {
+                 console.error(`Fehler beim Aktualisieren von currentData für Key ${el.dataset.key}`, e);
+             }
+         });
+     }
   });
 
-  // Rückgängig
+  // Undo
   document.getElementById('undo').addEventListener('click', () => {
+    if (!pat) return;
     if (historyIndex > 0) {
       historyIndex--;
       applyState(history[historyIndex]);
     }
   });
 
-  // Wiederholen
+  // Redo
   document.getElementById('redo').addEventListener('click', () => {
+    if (!pat) return;
     if (historyIndex < history.length - 1) {
       historyIndex++;
       applyState(history[historyIndex]);
@@ -238,46 +408,94 @@ const initialData = JSON.stringify(data); // Daten im Frontmatter als JSON-Strin
   });
 
   // Veröffentlichen
-  document.getElementById('publish').addEventListener('click', async () => {
-    const pat = sessionStorage.getItem('github_pat');
+  publishButton.addEventListener('click', async () => {
     if (!pat) return;
+    publishButton.disabled = true; // Button deaktivieren während des Vorgangs
+    updateStatus('Starte Veröffentlichung...');
 
-    // Hier müssen wir die Bilder auf GitHub hochladen und die Pfade aktualisieren
-    // Für diese einfache Implementierung speichern wir nur die Textänderungen
-    // Bild-Uploads erfordern zusätzliche API-Aufrufe und Pfadanpassungen
-    const repo = 'knuspermixx/astro-edit-starter';
-    const path = 'src/content/data.json';
-    const url = `https://api.github.com/repos/${repo}/contents/${path}`;
+    let imagesUploaded = true; // Flag für Erfolg der Bild-Uploads
 
-    // Aktuellen Inhalt abrufen, um SHA zu bekommen
-    const getResponse = await fetch(url, {
-      headers: { Authorization: `token ${pat}` },
-    });
-    const { sha } = await getResponse.json();
+    // 1. Bilder hochladen (falls vorhanden)
+    const imagePaths = Object.keys(pendingImageUploads);
+    if (imagePaths.length > 0) {
+        updateStatus(`Lade ${imagePaths.length} Bild(er) hoch...`);
+        for (const repoPath of imagePaths) {
+            const file = pendingImageUploads[repoPath];
+            const currentSha = await getFileSha(repoPath);
 
-    // Neue Dateiinhalte
-    const content = btoa(JSON.stringify(currentData, null, 2));
-    const body = {
-      message: 'Update data.json from live editor',
-      content,
-      sha,
-      branch: 'main',
-    };
+            if(currentSha === 'error') {
+                imagesUploaded = false;
+                updateStatus(`Fehler beim Abrufen des SHA für ${repoPath}. Upload abgebrochen.`, true);
+                break; // Weitere Uploads stoppen
+            }
 
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        Authorization: `token ${pat}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (response.ok) {
-      alert('Änderungen erfolgreich veröffentlicht!');
-      // Optional: Seite neu laden oder Build auslösen
+            const success = await uploadFileToGithub(repoPath, file, currentSha);
+            if (!success) {
+                imagesUploaded = false;
+                updateStatus(`Fehler beim Hochladen von ${repoPath}. Publish abgebrochen.`, true);
+                break; // Weitere Uploads stoppen
+            }
+        }
+        // Vorgemerkte Uploads löschen, wenn erfolgreich oder abgebrochen
+        pendingImageUploads = {};
     } else {
-      alert('Fehler beim Veröffentlichen. Überprüfe deinen PAT und die Berechtigungen.');
+        updateStatus('Keine neuen Bilder zum Hochladen.');
     }
+
+
+    // 2. data.json aktualisieren (nur wenn Bilder erfolgreich waren oder keine Bilder da waren)
+    if (imagesUploaded) {
+        updateStatus('Aktualisiere data.json...');
+        const dataPath = 'src/content/data.json';
+        const dataUrl = `https://api.github.com/repos/${repo}/contents/${dataPath}`;
+
+        try {
+            // Aktuellen SHA von data.json holen
+            const getDataResponse = await fetch(dataUrl, {
+                headers: { Authorization: `token ${pat}` },
+            });
+            if (!getDataResponse.ok) {
+                 throw new Error(`Fehler beim Holen von data.json SHA: ${getDataResponse.status}`);
+            }
+            const { sha: dataSha } = await getDataResponse.json();
+
+            // Neue Dateiinhalte (Textänderungen) sicher kodieren
+            const content = utf8ToBase64(JSON.stringify(currentData, null, 2));
+            const body = {
+                message: `Update data.json from live editor ${imagePaths.length > 0 ? '(with image updates)' : ''}`,
+                content,
+                sha: dataSha,
+                branch: 'main',
+            };
+
+            const response = await fetch(dataUrl, {
+                method: 'PUT',
+                headers: {
+                    Authorization: `token ${pat}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(body),
+            });
+
+            if (response.ok) {
+                updateStatus('Änderungen erfolgreich veröffentlicht!');
+                // Optional: Verlauf zurücksetzen nach erfolgreichem Publish
+                history = [JSON.parse(JSON.stringify(currentData))];
+                historyIndex = 0;
+            } else {
+                 const errorText = await response.text();
+                 throw new Error(`Fehler beim Veröffentlichen von data.json: ${response.status} ${errorText}`);
+            }
+        } catch (error) {
+            console.error("Fehler beim Veröffentlichen von data.json:", error);
+            updateStatus(`Fehler data.json: ${error.message}`, true);
+        }
+    } else {
+        updateStatus('Veröffentlichung von data.json übersprungen wegen Bild-Upload-Fehler.', true);
+    }
+
+    publishButton.disabled = false; // Button wieder aktivieren
+    // Status nach einiger Zeit löschen
+    setTimeout(() => updateStatus(''), 5000);
   });
 </script>
