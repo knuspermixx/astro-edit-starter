@@ -1,0 +1,24 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.edit-mode [data-editable] {
+  border: 1px dashed #ccc;
+  padding: 0.5em;
+  cursor: text;
+}
+
+.edit-mode .collection-editor button {
+  display: inline-block;
+}
+
+.collection-editor button {
+  display: none;
+}
+
+section {
+  padding: 1em;
+}
+

@@ -1,9 +1,11 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 
+import svelte from '@astrojs/svelte';
+
 // https://astro.build/config
 export default defineConfig({
-    site: 'https://knuspermixx.github.io',
-    base: 'astro-edit-starter',
-  
+  site: 'https://knuspermixx.github.io',
+  base: 'astro-edit-starter',
+  integrations: [svelte()],
 });

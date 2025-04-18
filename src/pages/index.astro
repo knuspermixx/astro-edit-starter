@@ -1,16 +1,55 @@
 ---
+import '../styles/global.css';
+import InlineEditor from '../components/InlineEditor.svelte';
+import CollectionEditor from '../components/CollectionEditor.svelte';
+import MediaEditor from '../components/MediaEditor.svelte';
+import { getCollection } from 'astro:content';
 
+const config = await import('../content/config.json');
+const posts = await getCollection('blog');
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Lokales Unternehmen</title>
+  </head>
+  <body>
+    <script>
+      if (typeof window !== 'undefined' && sessionStorage.getItem('github_pat')) {
+        document.body.classList.add('edit-mode');
+      }
+    </script>
+    <main>
+      <section>
+        <h1>
+          <InlineEditor content={config.hero.title} filePath="src/content/config.json" dataKey="hero.title" client:load />
+        </h1>
+        <p>
+          <InlineEditor content={config.hero.subtitle} filePath="src/content/config.json" dataKey="hero.subtitle" client:load />
+        </p>
+        <MediaEditor src="/hero-placeholder.jpg" filePath="src/content/hero.jpg" client:load />
+      </section>
+
+      <section>
+        <h2>
+          <InlineEditor content={config.about.title} filePath="src/content/config.json" dataKey="about.title" client:load />
+        </h2>
+        <p>
+          <InlineEditor content={config.about.description} filePath="src/content/config.json" dataKey="about.description" client:load />
+        </p>
+      </section>
+
+      <section>
+        <h2>Dienstleistungen</h2>
+        <CollectionEditor collection="services" items={config.services} client:load />
+      </section>
+
+      <section>
+        <h2>News</h2>
+        <CollectionEditor collection="blog" items={posts} client:load />
+      </section>
+    </main>
+  </body>
 </html>

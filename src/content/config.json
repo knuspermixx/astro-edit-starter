@@ -1,0 +1,22 @@
+{
+    "hero": {
+      "title": "Willkommen bei uns",
+      "subtitle": "Ihr lokales Unternehmen für beste Dienstleistungen"
+    },
+    "about": {
+      "title": "Über uns",
+      "description": "Wir sind ein lokales Unternehmen, das sich der Qualität verschrieben hat."
+    },
+    "services": [
+      {
+        "name": "Dienstleistung 1",
+        "description": "Beschreibung der ersten Dienstleistung."
+      },
+      {
+        "name": "Dienstleistung 2",
+        "description": "Beschreibung der zweiten Dienstleistung."
+      }
+    ]
+  }
+
+  
