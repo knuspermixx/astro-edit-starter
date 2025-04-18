@@ -237,34 +237,30 @@ const initialData = JSON.stringify(globalData); // Daten im Frontmatter als JSON
     }
   });
 
-  // Veröffentlichen
-  document.getElementById('publish').addEventListener('click', async () => {
-    const pat = sessionStorage.getItem('github_pat');
-    if (!pat) return;
+  // Hilfsfunktion: base64-URL erkennen
+  function isBase64Image(str) {
+    return typeof str === 'string' && str.startsWith('data:image/');
+  }
 
-    // Hier müssen wir die Bilder auf GitHub hochladen und die Pfade aktualisieren
-    // Für diese einfache Implementierung speichern wir nur die Textänderungen
-    // Bild-Uploads erfordern zusätzliche API-Aufrufe und Pfadanpassungen
-    const repo = 'knuspermixx/astro-edit-starter';
-    const path = 'src/content/global.json';
-    const url = `https://api.github.com/repos/${repo}/contents/${path}`;
-
-    // Aktuellen Inhalt abrufen, um SHA zu bekommen
-    const getResponse = await fetch(url, {
-      headers: { Authorization: `token ${pat}` },
-    });
-    const { sha } = await getResponse.json();
-
-    // Neue Dateiinhalte
-    const content = btoa(JSON.stringify(currentData, null, 2));
+  // Hilfsfunktion: Bild als Datei auf GitHub hochladen
+  async function uploadImageToGitHub({pat, repo, imagePath, base64Data, commitMsg}) {
+    const url = `https://api.github.com/repos/${repo}/contents/${imagePath}`;
+    // SHA der alten Datei holen (falls vorhanden)
+    let sha = undefined;
+    const getResp = await fetch(url, { headers: { Authorization: `token ${pat}` } });
+    if (getResp.ok) {
+      const data = await getResp.json();
+      sha = data.sha;
+    }
+    // base64-Teil extrahieren
+    const content = base64Data.split(',')[1];
     const body = {
-      message: 'Update global.json from live editor',
+      message: commitMsg,
       content,
-      sha,
       branch: 'main',
+      ...(sha ? { sha } : {})
     };
-
-    const response = await fetch(url, {
+    const putResp = await fetch(url, {
       method: 'PUT',
       headers: {
         Authorization: `token ${pat}`,
@@ -272,12 +268,86 @@ const initialData = JSON.stringify(globalData); // Daten im Frontmatter als JSON
       },
       body: JSON.stringify(body),
     });
+    if (!putResp.ok) throw new Error('Bild-Upload fehlgeschlagen');
+  }
 
-    if (response.ok) {
-      alert('Änderungen erfolgreich veröffentlicht!');
-      // Optional: Seite neu laden oder Build auslösen
-    } else {
-      alert('Fehler beim Veröffentlichen. Überprüfe deinen PAT und die Berechtigungen.');
+  // Veröffentlichen
+  document.getElementById('publish').addEventListener('click', async () => {
+    const pat = sessionStorage.getItem('github_pat');
+    if (!pat) return;
+    const repo = 'knuspermixx/astro-edit-starter';
+    let changedImages = [];
+    let uploadError = false;
+    // Prüfe hero.image
+    if (isBase64Image(currentData.hero.image)) {
+      try {
+        await uploadImageToGitHub({
+          pat,
+          repo,
+          imagePath: 'public/images/hero.jpg',
+          base64Data: currentData.hero.image,
+          commitMsg: 'Update hero image from live editor'
+        });
+        currentData.hero.image = '/astro-edit-starter/images/hero.jpg';
+        changedImages.push('hero');
+        console.log('Hero image uploaded and path set.');
+      } catch (e) {
+        uploadError = true;
+        alert('Fehler beim Hochladen von hero.jpg: ' + e.message);
+        currentData.hero.image = '/astro-edit-starter/images/hero.jpg'; // trotzdem Pfad setzen
+      }
+    }
+    // Prüfe about.image
+    if (isBase64Image(currentData.about.image)) {
+      try {
+        await uploadImageToGitHub({
+          pat,
+          repo,
+          imagePath: 'public/images/about.jpg',
+          base64Data: currentData.about.image,
+          commitMsg: 'Update about image from live editor'
+        });
+        currentData.about.image = '/astro-edit-starter/images/about.jpg';
+        changedImages.push('about');
+        console.log('About image uploaded and path set.');
+      } catch (e) {
+        uploadError = true;
+        alert('Fehler beim Hochladen von about.jpg: ' + e.message);
+        currentData.about.image = '/astro-edit-starter/images/about.jpg'; // trotzdem Pfad setzen
+      }
+    }
+    // global.json aktualisieren
+    try {
+      const path = 'src/content/global.json';
+      const url = `https://api.github.com/repos/${repo}/contents/${path}`;
+      const getResponse = await fetch(url, {
+        headers: { Authorization: `token ${pat}` },
+      });
+      const { sha } = await getResponse.json();
+      const content = btoa(JSON.stringify(currentData, null, 2));
+      const body = {
+        message: 'Update global.json from live editor',
+        content,
+        sha,
+        branch: 'main',
+      };
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          Authorization: `token ${pat}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      if (response.ok) {
+        alert('Änderungen erfolgreich veröffentlicht!' + (changedImages.length ? '\nBilder wurden ersetzt: ' + changedImages.join(', ') : ''));
+      } else {
+        alert('Fehler beim Veröffentlichen von global.json. Überprüfe deinen PAT und die Berechtigungen.');
+        console.error(await response.text());
+      }
+    } catch (e) {
+      alert('Fehler beim global.json-Update: ' + e.message);
+      console.error(e);
     }
   });
 </script>
