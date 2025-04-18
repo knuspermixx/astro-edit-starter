@@ -186,6 +186,19 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
     o[keys[keys.length - 1]] = value;
   }
 
+  // Hilfsfunktion: GitHub API Call
+  async function githubApi(path, options = {}) {
+    const url = `https://api.github.com/repos/${repo}/${path}`;
+    const headers = {
+      Authorization: `token ${pat}`,
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+    const res = await fetch(url, { ...options, headers });
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${await res.text()}`);
+    return res.json();
+  }
+
   // --- Initialisierung & Event Listeners ---
 
   if (pat) {
@@ -322,99 +335,75 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
     }
   });
 
-  // Bild-Upload zu GitHub (immer neue Datei)
-  async function uploadFileToGithub(repoPath, file) {
-    const url = `https://api.github.com/repos/${repo}/contents/${repoPath}`;
-    try {
-      const content = await readFileAsBase64(file);
-      const body = {
-        message: `Upload new image ${repoPath} via editor`,
-        content: content,
-        branch: 'main',
-      };
-      updateStatus(`Lade hoch: ${repoPath}...`);
-      const response = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          Authorization: `token ${pat}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-      if (!response.ok) {
-        throw new Error(`GitHub API Fehler (uploadFile ${repoPath}): ${response.status} ${await response.text()}`);
-      }
-      updateStatus(`${repoPath} hochgeladen.`);
-      return true;
-    } catch (error) {
-      console.error("Fehler beim Hochladen der Datei:", error);
-      updateStatus(`Upload-Fehler ${repoPath}: ${error.message}`, true);
-      return false;
-    }
-  }
-
-  // Veröffentlichen
+  // Publish: Ein Commit für alle Änderungen (Bilder + data.json)
   publishButton.addEventListener('click', async () => {
     if (!pat) return;
     publishButton.disabled = true;
     updateStatus('Starte Veröffentlichung...');
-    let imagesUploaded = true;
-    const imageEntries = Object.entries(pendingImageUploads);
-    if (imageEntries.length > 0) {
-      updateStatus(`Lade ${imageEntries.length} Bild(er) hoch...`);
+    try {
+      // 1. Hole den aktuellen Commit & Tree von main
+      const branch = await githubApi('git/refs/heads/main');
+      const latestCommitSha = branch.object.sha;
+      const latestCommit = await githubApi(`git/commits/${latestCommitSha}`);
+      const baseTreeSha = latestCommit.tree.sha;
+
+      // 2. Erstelle Blobs für alle neuen Bilder
+      const imageEntries = Object.entries(pendingImageUploads);
+      const blobs = [];
       for (const [repoPath, { file }] of imageEntries) {
-        const success = await uploadFileToGithub(repoPath, file);
-        if (!success) {
-          imagesUploaded = false;
-          updateStatus(`Fehler beim Hochladen von ${repoPath}. Publish abgebrochen.`, true);
-          break;
-        }
-      }
-      if (imagesUploaded) pendingImageUploads = {};
-    } else {
-      updateStatus('Keine neuen Bilder zum Hochladen.');
-    }
-    if (imagesUploaded) {
-      updateStatus('Aktualisiere data.json...');
-      const dataPath = 'src/content/data.json';
-      const dataUrl = `https://api.github.com/repos/${repo}/contents/${dataPath}`;
-      try {
-        const getDataResponse = await fetch(dataUrl, {
-          headers: { Authorization: `token ${pat}` },
+        updateStatus(`Bereite Bild für Commit vor: ${repoPath}`);
+        const content = await readFileAsBase64(file);
+        const blob = await githubApi('git/blobs', {
+          method: 'POST',
+          body: JSON.stringify({ content, encoding: 'base64' })
         });
-        if (!getDataResponse.ok) {
-          throw new Error(`Fehler beim Holen von data.json SHA: ${getDataResponse.status}`);
-        }
-        const { sha: dataSha } = await getDataResponse.json();
-        const content = utf8ToBase64(JSON.stringify(currentData, null, 2));
-        const body = {
-          message: `Update data.json from live editor (with possible image updates)` ,
-          content,
-          sha: dataSha,
-          branch: 'main',
-        };
-        const response = await fetch(dataUrl, {
-          method: 'PUT',
-          headers: {
-            Authorization: `token ${pat}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(body),
-        });
-        if (response.ok) {
-          updateStatus('Änderungen erfolgreich veröffentlicht!');
-          history = [JSON.parse(JSON.stringify(currentData))];
-          historyIndex = 0;
-        } else {
-          const errorText = await response.text();
-          throw new Error(`Fehler beim Veröffentlichen von data.json: ${response.status} ${errorText}`);
-        }
-      } catch (error) {
-        console.error("Fehler beim Veröffentlichen von data.json:", error);
-        updateStatus(`Fehler data.json: ${error.message}`, true);
+        blobs.push({ path: repoPath, mode: '100644', type: 'blob', sha: blob.sha });
       }
-    } else {
-      updateStatus('Veröffentlichung von data.json übersprungen wegen Bild-Upload-Fehler.', true);
+
+      // 3. Erstelle Blob für data.json
+      updateStatus('Bereite data.json für Commit vor...');
+      const dataContent = JSON.stringify(currentData, null, 2);
+      const dataBlob = await githubApi('git/blobs', {
+        method: 'POST',
+        body: JSON.stringify({ content: dataContent, encoding: 'utf-8' })
+      });
+      blobs.push({ path: 'src/content/data.json', mode: '100644', type: 'blob', sha: dataBlob.sha });
+
+      // 4. Erstelle neuen Tree
+      updateStatus('Erstelle Tree für Commit...');
+      const newTree = await githubApi('git/trees', {
+        method: 'POST',
+        body: JSON.stringify({
+          base_tree: baseTreeSha,
+          tree: blobs
+        })
+      });
+
+      // 5. Erstelle neuen Commit
+      updateStatus('Erstelle Commit...');
+      const commit = await githubApi('git/commits', {
+        method: 'POST',
+        body: JSON.stringify({
+          message: 'Update Bilder und data.json via Editor',
+          tree: newTree.sha,
+          parents: [latestCommitSha]
+        })
+      });
+
+      // 6. Setze main auf neuen Commit
+      updateStatus('Pushe Commit auf main...');
+      await githubApi('git/refs/heads/main', {
+        method: 'PATCH',
+        body: JSON.stringify({ sha: commit.sha })
+      });
+
+      updateStatus('Änderungen erfolgreich veröffentlicht!');
+      pendingImageUploads = {};
+      history = [JSON.parse(JSON.stringify(currentData))];
+      historyIndex = 0;
+    } catch (error) {
+      console.error('Fehler beim Publish:', error);
+      updateStatus(`Fehler beim Publish: ${error.message}`, true);
     }
     publishButton.disabled = false;
     setTimeout(() => updateStatus(''), 5000);
