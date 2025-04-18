@@ -73,7 +73,7 @@
   }
 
   onMount(() => {
-    isEditMode = !!sessionStorage.getItem('github_pat');
+    isEditMode = typeof window !== 'undefined' && !!sessionStorage.getItem('github_pat');
   });
 </script>
 
