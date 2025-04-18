@@ -189,8 +189,9 @@ const initialData = JSON.stringify(globalData); // Daten im Frontmatter als JSON
       document.querySelectorAll('img[data-key]').forEach(img => {
         img.addEventListener('click', () => {
           if (!pat) return;
-          const input = document.getElementById(`${img.dataset.key}-upload`);
-          input.click();
+          // Ersetze Punkte durch Bindestriche für die ID
+          const input = document.querySelector(`input[type="file"][id$="${img.dataset.key.replace(/\./g, '-')}-upload"]`);
+          if (input) input.click();
         });
       });
 
