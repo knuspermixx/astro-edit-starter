@@ -8,7 +8,7 @@ const repo = 'knuspermixx/astro-edit-starter'; // Repository Name für API Calls
 
 // Daten für den Client vorbereiten
 const initialDataString = JSON.stringify(data); // Als String übergeben
-const initialDataForClient = data; // Objekt für Pfad-Lookup
+// const initialDataForClient = data; // Nicht mehr benötigt für Pfad-Lookup hier
 ---
 
 <Layout>
@@ -65,26 +65,27 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
 
 <section id="features" class="py-16">
   <div class="container mx-auto px-6">
-    <h2 class="text-3xl font-bold text-center mb-12" contenteditable="false" data-key="features.0.title">Unsere Features</h2>
+    <h2 class="text-3xl font-bold text-center mb-12" contenteditable="false" data-key="features.0.title">Unsere Features</h2> {/* Beachte: Dieser Key ist jetzt statisch, da Features nicht mehr hinzugefügt/gelöscht werden */}
     <div id="features-list" class="flex flex-wrap -mx-6">
       {data.features.map((feature, index) => (
-        <div class="w-full md:w-1/3 p-6 feature-item" data-index={index}>
-          <div class="h-full text-center">
+        <div class="w-full md:w-1/3 p-6"> {/* Removed feature-item class and data-index */}
+          {/* Wrap the content in an anchor tag */}
+          <a href={`${base}/feature/${feature.id}`} class="block h-full text-center hover:shadow-lg transition-shadow duration-300 p-6 border border-gray-200 rounded">
             <div class="mb-4 text-4xl">
-              {feature.icon === 'stars' && <span contenteditable="false">⭐</span>}
-              {feature.icon === 'lightbulb' && <span contenteditable="false">💡</span>}
-              {feature.icon === 'users' && <span contenteditable="false">👥</span>}
+              {/* Icons remain, but not editable here */}
+              {feature.icon === 'stars' && <span>⭐</span>}
+              {feature.icon === 'lightbulb' && <span>💡</span>}
+              {feature.icon === 'users' && <span>👥</span>}
             </div>
-            <h3 class="text-xl font-medium mb-3" contenteditable="false" data-key={`features.${index}.title`}>{feature.title}</h3>
-            <p class="text-gray-600 leading-relaxed" contenteditable="false" data-key={`features.${index}.description`}>{feature.description}</p>
-            <button class="delete-feature-btn bg-red-500 text-white rounded px-2 py-1 mt-2 hidden" data-index={index} type="button">Löschen</button>
-          </div>
+            {/* Removed contenteditable and data-key from h3 and p */}
+            <h3 class="text-xl font-medium mb-3">{feature.title}</h3>
+            <p class="text-gray-600 leading-relaxed">{feature.description}</p>
+            {/* Removed delete button */}
+          </a>
         </div>
       ))}
     </div>
-    <div class="text-center mt-6">
-      <button id="add-feature-btn" class="bg-black text-white px-4 py-2 rounded hidden" type="button">Feature hinzufügen</button>
-    </div>
+    {/* Removed Add Feature button */}
   </div>
 </section>
 
@@ -137,7 +138,7 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
 </footer>
 </Layout>
 
-<script type="module" define:vars={{ initialDataString, initialDataForClient, base, repo }}>
+<script type="module" define:vars={{ initialDataString, base, repo }}> // Removed initialDataForClient
   // Initialer Zustand wird jetzt über define:vars übergeben und hier geparst
   const initialData = JSON.parse(initialDataString);
   let currentData = JSON.parse(initialDataString); // Aktueller Bearbeitungszustand
@@ -184,9 +185,17 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
     const keys = keyPath.split('.');
     let o = obj;
     for (let i = 0; i < keys.length - 1; i++) {
+       if (keys[i] === '__proto__' || keys[i] === 'constructor' || keys[i] === 'prototype') {
+         console.error("Attempted prototype pollution:", keyPath);
+         return; // Verhindere Prototype Pollution
+       }
       if (!o[keys[i]]) o[keys[i]] = {};
       o = o[keys[i]];
     }
+     if (keys[keys.length - 1] === '__proto__' || keys[keys.length - 1] === 'constructor' || keys[keys.length - 1] === 'prototype') {
+        console.error("Attempted prototype pollution:", keyPath);
+        return; // Verhindere Prototype Pollution
+     }
     o[keys[keys.length - 1]] = value;
   }
 
@@ -200,14 +209,27 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
     };
     const res = await fetch(url, { ...options, headers });
     if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${await res.text()}`);
-    return res.json();
+     // Nur bei GET oder wenn explizit JSON erwartet wird, parsen
+     if (options.method === 'GET' || !options.method || res.headers.get('Content-Type')?.includes('application/json')) {
+        try {
+            return await res.json();
+        } catch (e) {
+            // Wenn kein JSON zurückkommt (z.B. bei PATCH auf refs), leeres Objekt zurückgeben
+            if (res.status === 200 || res.status === 201 || res.status === 204) {
+                return {};
+            }
+            throw e; // Anderen Fehler weiterwerfen
+        }
+    }
+    return {}; // Kein JSON erwartet oder vorhanden
   }
 
   // --- Initialisierung & Event Listeners ---
 
   // Funktion zum Anhängen des Input-Listeners an ein Element
   function attachInputListener(el) {
-    if (!el || el.tagName === 'IMG' || !el.hasAttribute('data-key')) return;
+    // Nur an Elemente anhängen, die *nicht* Teil der Feature-Liste sind
+    if (!el || el.tagName === 'IMG' || !el.hasAttribute('data-key') || el.closest('#features-list')) return;
 
     el.addEventListener('input', () => {
       if (!pat) return;
@@ -224,9 +246,12 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
 
   if (pat) {
     toolbar.classList.remove('hidden');
+    // Mache nur Elemente *außerhalb* der Feature-Liste bearbeitbar
     document.querySelectorAll('[contenteditable="false"][data-key]').forEach(el => {
-      el.setAttribute('contenteditable', 'true');
-      attachInputListener(el); // Listener für initial bearbeitbare Elemente anhängen
+       if (!el.closest('#features-list')) {
+         el.setAttribute('contenteditable', 'true');
+         attachInputListener(el); // Listener für initial bearbeitbare Elemente anhängen
+       }
     });
   } else {
     toolbar.classList.add('hidden');
@@ -246,12 +271,17 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
   // Anwenden eines Zustands (nur Textdaten und Bild-URLs)
   function applyState(state) {
     currentData = JSON.parse(JSON.stringify(state));
+    // Aktualisiere nur Elemente *außerhalb* der Feature-Liste
     document.querySelectorAll('[data-key]').forEach(el => {
+       if (el.closest('#features-list')) return; // Überspringe Feature-Liste
+
       const key = el.dataset.key;
       let value = key.split('.').reduce((obj, k) => obj && obj[k], currentData);
       if (el.tagName === 'IMG') {
-        if (el.src !== location.origin + value) {
-          el.src = value;
+        // Nur aktualisieren, wenn sich die URL tatsächlich geändert hat
+        const newSrc = value.startsWith('/') ? location.origin + value : value;
+        if (el.src !== newSrc) {
+          el.src = value; // Setze die URL aus den Daten
         }
       } else {
         if (el.textContent !== value) {
@@ -268,8 +298,9 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
     window.location.reload();
   });
 
-  // Klick auf Bild -> Trigger Input
+  // Klick auf Bild -> Trigger Input (nur für Bilder außerhalb der Feature-Liste)
   document.querySelectorAll('img[data-key]').forEach(img => {
+     if (img.closest('#features-list')) return; // Überspringe Feature-Liste
     img.addEventListener('click', () => {
       if (!pat) return;
       const dataKey = img.dataset.key;
@@ -291,22 +322,24 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
       if (file) {
         const dataKey = input.id.replace('input-', '').replace(/-/g, '.');
         const img = document.querySelector(`img[data-key="${dataKey}"]`);
-        if (img) {
+        if (img && !img.closest('#features-list')) { // Stelle sicher, dass es nicht in der Feature-Liste ist
           // Eindeutigen Dateinamen erzeugen
           const ext = file.name.split('.').pop();
           const uniqueName = `${Date.now()}-${Math.random().toString(36).substr(2,6)}.${ext}`;
+          // Korrekter Pfad im Repo (relativ zum public Ordner)
           const repoPath = `public/images/${uniqueName}`;
-          const newUrl = `${base}/images/${uniqueName}`;
+          // Korrekte URL für das src Attribut (relativ zur Basis-URL der Seite)
+          const newUrl = `${base}/images/${uniqueName}`; // Verwende base
           // Lokale Vorschau aktualisieren
           const objectURL = URL.createObjectURL(file);
-          img.src = objectURL;
-          // currentData aktualisieren (URL setzen)
-          setValueByKeyPath(currentData, dataKey, newUrl);
+          img.src = objectURL; // Vorschau mit lokaler URL
+          // currentData aktualisieren (URL setzen, die im Repo gespeichert wird)
+          setValueByKeyPath(currentData, dataKey, newUrl); // Speichere die relative URL
           // Upload vormerken
           pendingImageUploads[repoPath] = { file, dataKey, newUrl };
           updateStatus(`${file.name} zum Hochladen vorgemerkt.`);
           saveState();
-        } else {
+        } else if (!img) {
           console.error(`Bild-Element für Input ${input.id} (Key: ${dataKey}) nicht gefunden.`);
         }
       }
@@ -356,15 +389,17 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
           method: 'POST',
           body: JSON.stringify({ content, encoding: 'base64' })
         });
+        // Verwende den korrekten repoPath (relativ zum Repo-Root)
         blobs.push({ path: repoPath, mode: '100644', type: 'blob', sha: blob.sha });
       }
 
       // 3. Erstelle Blob für data.json
       updateStatus('Bereite data.json für Commit vor...');
       const dataContent = JSON.stringify(currentData, null, 2);
+      // const encodedDataContent = utf8ToBase64(dataContent); // Base64 für GitHub API
       const dataBlob = await githubApi('git/blobs', {
         method: 'POST',
-        body: JSON.stringify({ content: dataContent, encoding: 'utf-8' })
+        body: JSON.stringify({ content: dataContent, encoding: 'utf-8' }) // utf-8 verwenden
       });
       blobs.push({ path: 'src/content/data.json', mode: '100644', type: 'blob', sha: dataBlob.sha });
 
@@ -383,7 +418,7 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
       const commit = await githubApi('git/commits', {
         method: 'POST',
         body: JSON.stringify({
-          message: 'Update Bilder und data.json via Editor',
+          message: 'Update content and images via Editor', // Allgemeinere Nachricht
           tree: newTree.sha,
           parents: [latestCommitSha]
         })
@@ -397,7 +432,8 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
       });
 
       updateStatus('Änderungen erfolgreich veröffentlicht!');
-      pendingImageUploads = {};
+      pendingImageUploads = {}; // Leere vorgemerkte Uploads
+      // Setze den aktuellen Zustand als neuen Startpunkt für die History
       history = [JSON.parse(JSON.stringify(currentData))];
       historyIndex = 0;
     } catch (error) {
@@ -406,118 +442,6 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
     }
     publishButton.disabled = false;
     setTimeout(() => updateStatus(''), 5000);
-  });
-
-  // --- Features: Add/Delete ---
-  function renderFeatureButtons() {
-    const isEdit = !!pat;
-    document.querySelectorAll('.delete-feature-btn').forEach(btn => {
-      btn.classList.toggle('hidden', !isEdit);
-    });
-    const addBtn = document.getElementById('add-feature-btn');
-    if (addBtn) addBtn.classList.toggle('hidden', !isEdit);
-  }
-
-  // Funktion zum Erstellen eines einzelnen Feature-Elements (Helper)
-  function createFeatureElement(feature, index) {
-    const featureItem = document.createElement('div');
-    featureItem.className = 'w-full md:w-1/3 p-6 feature-item';
-    featureItem.dataset.index = index;
-    // Generiere das HTML für das Feature
-    featureItem.innerHTML = `
-      <div class="h-full text-center">
-        <div class="mb-4 text-4xl">
-          ${feature.icon === 'stars' ? '<span contenteditable="false">⭐</span>' : ''}
-          ${feature.icon === 'lightbulb' ? '<span contenteditable="false">💡</span>' : ''}
-          ${feature.icon === 'users' ? '<span contenteditable="false">👥</span>' : ''}
-        </div>
-        <h3 class="text-xl font-medium mb-3" contenteditable="false" data-key="features.${index}.title">${feature.title}</h3>
-        <p class="text-gray-600 leading-relaxed" contenteditable="false" data-key="features.${index}.description">${feature.description}</p>
-        <button class="delete-feature-btn bg-red-500 text-white rounded px-2 py-1 mt-2 ${pat ? '' : 'hidden'}" data-index="${index}" type="button">Löschen</button>
-      </div>
-    `;
-
-    // Bearbeitbarkeit und Listener für neue Elemente setzen, falls im Edit-Modus
-    if (pat) {
-      const titleEl = featureItem.querySelector(`[data-key="features.${index}.title"]`);
-      const descEl = featureItem.querySelector(`[data-key="features.${index}.description"]`);
-      if (titleEl) {
-        titleEl.setAttribute('contenteditable', 'true');
-        attachInputListener(titleEl); // Listener anhängen
-      }
-      if (descEl) {
-        descEl.setAttribute('contenteditable', 'true');
-        attachInputListener(descEl); // Listener anhängen
-      }
-    }
-    return featureItem;
-  }
-
-  // Funktion zum Aktualisieren der Indizes und Keys nach dem Löschen
-  function updateFeatureIndicesAndKeys() {
-    const featureItems = document.querySelectorAll('#features-list .feature-item');
-    featureItems.forEach((item, index) => {
-      item.dataset.index = index; // Update data-index attribute
-      const titleEl = item.querySelector('[data-key^="features."][data-key$=".title"]');
-      const descEl = item.querySelector('[data-key^="features."][data-key$=".description"]');
-      const deleteBtn = item.querySelector('.delete-feature-btn');
-
-      const newTitleKey = `features.${index}.title`;
-      const newDescKey = `features.${index}.description`;
-
-      if (titleEl) titleEl.dataset.key = newTitleKey;
-      if (descEl) descEl.dataset.key = newDescKey;
-      if (deleteBtn) deleteBtn.dataset.index = index;
-
-      // Wichtig: Auch die Listener neu anhängen, da sich der Key geändert hat!
-      // Entferne alte Listener (optional, aber sauberer)
-      // titleEl?.removeEventListener('input', ...); // Geht so nicht einfach
-      // Stattdessen: Erstelle das Element neu oder hänge Listener basierend auf dem neuen Key an.
-      // Einfacher Ansatz: Wir gehen davon aus, dass die Listener durch attachInputListener korrekt funktionieren,
-      // da sie den Key dynamisch aus `el.dataset.key` lesen.
-    });
-  }
-
-  // Event Listener für DOMContentLoaded
-  document.addEventListener('DOMContentLoaded', () => {
-    renderFeatureButtons(); // Buttons initial rendern
-    const featuresList = document.getElementById('features-list');
-    if (!featuresList) return; // Sicherstellen, dass die Liste existiert
-
-    // Event Delegation für Delete Buttons
-    featuresList.addEventListener('click', (e) => {
-      const btn = e.target.closest('.delete-feature-btn');
-      if (!pat || !btn) return;
-      e.preventDefault();
-      const idx = parseInt(btn.dataset.index);
-      if (!isNaN(idx) && currentData.features.length > 1) {
-        currentData.features.splice(idx, 1);
-        saveState();
-        const itemToRemove = featuresList.querySelector(`.feature-item[data-index="${idx}"]`);
-        itemToRemove?.remove();
-        updateFeatureIndicesAndKeys(); // Indizes und Keys anpassen
-        // renderFeatureButtons(); // Nicht nötig, da Buttons nicht betroffen sind
-      }
-      return false;
-    });
-
-    // Event Listener für Add Button
-    document.getElementById('add-feature-btn')?.addEventListener('click', (e) => {
-      if (!pat) return false;
-      e.preventDefault();
-      const newFeatureData = {
-        title: 'Neues Feature',
-        description: 'Beschreibung...',
-        icon: 'stars' // Standard-Icon
-      };
-      currentData.features.push(newFeatureData);
-      saveState();
-      const newIndex = currentData.features.length - 1;
-      const newElement = createFeatureElement(newFeatureData, newIndex);
-      featuresList.appendChild(newElement);
-      // renderFeatureButtons(); // Nicht nötig, da Buttons nicht betroffen sind
-      return false;
-    });
   });
 
 </script>

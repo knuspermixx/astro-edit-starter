@@ -12,19 +12,25 @@
   },
   "features": [
     {
+      "id": "quality",
       "title": "Qualität",
       "description": "Wir legen großen Wert auf Qualität und Präzision bei allem, was wir tun.",
-      "icon": "stars"
+      "icon": "stars",
+      "details": "Hier stehen ausführliche Informationen zur Qualität unserer Arbeit und Prozesse."
     },
     {
+      "id": "innovation",
       "title": "Innovation",
       "description": "Wir sind stets bestrebt, innovative Lösungen zu finden und neue Wege zu gehen.",
-      "icon": "lightbulb"
+      "icon": "lightbulb",
+      "details": "Details zu unseren Innovationsstrategien und wie wir neue Technologien einsetzen."
     },
     {
+      "id": "customer-satisfaction",
       "title": "Kundenzufriedenheit",
       "description": "Die Zufriedenheit unserer Kunden steht für uns an erster Stelle.",
-      "icon": "users"
+      "icon": "users",
+      "details": "Informationen darüber, wie wir Kundenzufriedenheit messen und sicherstellen."
     }
   ],
   "contact": {
