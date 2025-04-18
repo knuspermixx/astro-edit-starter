@@ -5,7 +5,9 @@ import CollectionEditor from '../components/CollectionEditor.svelte';
 import MediaEditor from '../components/MediaEditor.svelte';
 import { getCollection } from 'astro:content';
 
-const config = await import('../content/config.json');
+const hero = await import('../content/hero.json');
+const about = await import('../content/about.json');
+const services = await import('../content/services.json');
 const posts = await getCollection('blog');
 ---
 
@@ -22,28 +24,32 @@ const posts = await getCollection('blog');
       }
     </script>
     <main>
+      <div class="edit-controls">
+        <button id="publish">Veröffentlichen</button>
+        <button id="logout">Ausloggen</button>
+      </div>
       <section>
         <h1>
-          <InlineEditor content={config.hero.title} filePath="src/content/config.json" dataKey="hero.title" client:load />
+          <InlineEditor content={hero.title} filePath="src/content/hero.json" dataKey="title" client:load />
         </h1>
         <p>
-          <InlineEditor content={config.hero.subtitle} filePath="src/content/config.json" dataKey="hero.subtitle" client:load />
+          <InlineEditor content={hero.subtitle} filePath="src/content/hero.json" dataKey="subtitle" client:load />
         </p>
-        <MediaEditor src="/hero-placeholder.jpg" filePath="src/content/hero.jpg" client:load />
+        <MediaEditor src="/hero-placeholder.jpg" filePath="public/images/hero.jpg" client:load />
       </section>
 
       <section>
         <h2>
-          <InlineEditor content={config.about.title} filePath="src/content/config.json" dataKey="about.title" client:load />
+          <InlineEditor content={about.title} filePath="src/content/about.json" dataKey="title" client:load />
         </h2>
         <p>
-          <InlineEditor content={config.about.description} filePath="src/content/config.json" dataKey="about.description" client:load />
+          <InlineEditor content={about.description} filePath="src/content/about.json" dataKey="description" client:load />
         </p>
       </section>
 
       <section>
         <h2>Dienstleistungen</h2>
-        <CollectionEditor collection="services" items={config.services} client:load />
+        <CollectionEditor collection="services" items={services} client:load />
       </section>
 
       <section>
@@ -51,5 +57,29 @@ const posts = await getCollection('blog');
         <CollectionEditor collection="blog" items={posts} client:load />
       </section>
     </main>
+    <script>
+      const logoutButton = document.getElementById('logout');
+      const publishButton = document.getElementById('publish');
+      if (logoutButton) {
+        logoutButton.addEventListener('click', () => {
+          sessionStorage.removeItem('github_pat');
+          window.location.reload();
+        });
+      }
+      if (publishButton) {
+        publishButton.addEventListener('click', () => {
+          window.location.reload();
+        });
+      }
+    </script>
+    <style>
+      .edit-controls {
+        margin: 1em;
+        display: none;
+      }
+      .edit-mode .edit-controls {
+        display: block;
+      }
+    </style>
   </body>
 </html>

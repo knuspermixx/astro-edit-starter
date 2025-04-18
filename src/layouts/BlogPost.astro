@@ -50,7 +50,7 @@ const slug = Astro.url.pathname.split('/').filter(Boolean).pop() || '';
             statusDiv.textContent = 'Fehler: Slug ist leer.';
             return;
           }
-          const content = contentDiv.innerHTML;
+          const content = contentDiv.textContent; // Save as plain text for Markdown
           const filePath = `src/content/blog/${slug}.mdx`;
           statusDiv.textContent = 'Veröffentliche...';
 
@@ -79,6 +79,7 @@ const slug = Astro.url.pathname.split('/').filter(Boolean).pop() || '';
 
             if (putResponse.ok) {
               statusDiv.textContent = 'Erfolgreich veröffentlicht!';
+              window.location.href = '/astro-edit-starter/blog';
             } else {
               statusDiv.textContent = 'Fehler beim Veröffentlichen.';
             }
@@ -94,6 +95,10 @@ const slug = Astro.url.pathname.split('/').filter(Boolean).pop() || '';
     <style>
       .edit-controls {
         margin: 1em 0;
+        display: none;
+      }
+      .edit-mode .edit-controls {
+        display: block;
       }
       .content {
         padding: 1em;

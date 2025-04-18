@@ -1,8 +1,8 @@
 ---
 import '../../styles/global.css';
-import { getCollection } from 'astro:content';
+import { type CollectionEntry, getCollection } from 'astro:content';
 
-const posts = await getCollection('blog');
+const posts: CollectionEntry<'blog'>[] = await getCollection('blog');
 ---
 
 <!doctype html>
@@ -17,7 +17,7 @@ const posts = await getCollection('blog');
       <ul>
         {posts.map((post) => (
           <li>
-            <a href={`astro-edit-starter/blog/${post.id}`}>{post.data.title}</a>
+            <a href={`/astro-edit-starter/blog/${post.id}`}>{post.data.title}</a>
           </li>
         ))}
       </ul>
