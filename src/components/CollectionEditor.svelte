@@ -1,5 +1,6 @@
 <script lang="ts">
   import InlineEditor from "./InlineEditor.svelte";
+  import { onMount } from 'svelte';
 
   interface ServiceItem {
     name: string;
@@ -18,9 +19,7 @@
     collection: string;
     items: ServiceItem[] | BlogItem[];
   }>();
-  let isEditMode = $state(
-    typeof window !== "undefined" && !!sessionStorage.getItem("github_pat")
-  );
+  let isEditMode = $state(false);
   let status = $state("");
   let history = $state<(ServiceItem[] | BlogItem[])[]>([items]);
   let historyIndex = $state(0);
@@ -192,6 +191,10 @@
       items = [...history[historyIndex]];
     }
   }
+
+  onMount(() => {
+    isEditMode = !!sessionStorage.getItem('github_pat');
+  });
 </script>
 
 <div class="collection-editor">

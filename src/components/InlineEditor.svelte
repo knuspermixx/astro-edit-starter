@@ -1,11 +1,13 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+
   let { content, filePath, dataKey } = $props<{
     content: string;
     filePath: string;
     dataKey: string;
   }>();
 
-  let isEditMode = $state(typeof window !== 'undefined' && !!sessionStorage.getItem('github_pat'));
+  let isEditMode = $state(false);
   let editedContent = $state(content);
   let status = $state('');
   let history = $state<string[]>([content]);
@@ -17,6 +19,10 @@
       history = [content];
       historyIndex = 0;
     }
+  });
+
+  onMount(() => {
+    isEditMode = !!sessionStorage.getItem('github_pat');
   });
 
   async function saveChanges() {

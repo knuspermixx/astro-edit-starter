@@ -1,10 +1,12 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+
   let { src, filePath } = $props<{
     src: string;
     filePath: string;
   }>();
 
-  let isEditMode = $state(typeof window !== 'undefined' && !!sessionStorage.getItem('github_pat'));
+  let isEditMode = $state(false);
   let showUpload = $state(false);
   let status = $state('');
 
@@ -69,6 +71,10 @@
     };
     reader.readAsDataURL(file);
   }
+
+  onMount(() => {
+    isEditMode = !!sessionStorage.getItem('github_pat');
+  });
 </script>
 
 <div
