@@ -1,94 +1,10 @@
 ---
-<<<<<<< HEAD
-import '../styles/global.css';
-import InlineEditor from '../components/InlineEditor.svelte';
-import CollectionEditor from '../components/CollectionEditor.svelte';
-import MediaEditor from '../components/MediaEditor.svelte';
-import { getCollection } from 'astro:content';
-
-const hero = await import('../content/hero.json');
-const about = await import('../content/about.json');
-const services = await import('../content/services.json');
-const posts = await getCollection('blog');
----
-=======
 import globalData from "../content/global.json";
 
 const initialData = JSON.stringify(globalData); // Daten im Frontmatter als JSON-String
->>>>>>> test
 
-<!doctype html>
-<html lang="de">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Lokales Unternehmen</title>
-  </head>
-  <body>
-    <script>
-      if (typeof window !== 'undefined' && sessionStorage.getItem('github_pat')) {
-        document.body.classList.add('edit-mode');
-      }
-    </script>
-    <main>
-      <div class="edit-controls">
-        <button id="publish">Veröffentlichen</button>
-        <button id="logout">Ausloggen</button>
-      </div>
-      <section>
-        <h1>
-          <InlineEditor content={hero.title} filePath="src/content/hero.json" dataKey="title" client:load />
-        </h1>
-        <p>
-          <InlineEditor content={hero.subtitle} filePath="src/content/hero.json" dataKey="subtitle" client:load />
-        </p>
-        <MediaEditor src="/hero-placeholder.jpg" filePath="public/images/hero.jpg" client:load />
-      </section>
+---
 
-<<<<<<< HEAD
-      <section>
-        <h2>
-          <InlineEditor content={about.title} filePath="src/content/about.json" dataKey="title" client:load />
-        </h2>
-        <p>
-          <InlineEditor content={about.description} filePath="src/content/about.json" dataKey="description" client:load />
-        </p>
-      </section>
-
-      <section>
-        <h2>Dienstleistungen</h2>
-        <CollectionEditor collection="services" items={services} client:load />
-      </section>
-
-      <section>
-        <h2>News</h2>
-        <CollectionEditor collection="blog" items={posts} client:load />
-      </section>
-    </main>
-    <script>
-      const logoutButton = document.getElementById('logout');
-      const publishButton = document.getElementById('publish');
-      if (logoutButton) {
-        logoutButton.addEventListener('click', () => {
-          sessionStorage.removeItem('github_pat');
-          window.location.reload();
-        });
-      }
-      if (publishButton) {
-        publishButton.addEventListener('click', () => {
-          window.location.reload();
-        });
-      }
-    </script>
-    <style>
-      .edit-controls {
-        margin: 1em;
-        display: none;
-      }
-      .edit-mode .edit-controls {
-        display: block;
-      }
-    </style>
-=======
 <html lang="de">
   <head>
     <meta charset="utf-8" />
@@ -374,6 +290,5 @@ const initialData = JSON.stringify(globalData); // Daten im Frontmatter als JSON
         }
       });
     </script>
->>>>>>> test
   </body>
 </html>

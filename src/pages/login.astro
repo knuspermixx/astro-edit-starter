@@ -1,23 +1,3 @@
-<<<<<<< HEAD
----
-import '../styles/global.css';
----
-
-<!doctype html>
-<html lang="de">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Login</title>
-  </head>
-  <body>
-    <main>
-      <div class="login-container">
-        <h1>Login</h1>
-        <p>Geben Sie Ihren GitHub Personal Access Token ein.</p>
-        <input type="password" id="pat" placeholder="GitHub PAT" />
-        <button id="submit">Einloggen</button>
-        <div id="error" class="error"></div>
-=======
 <!doctype html>
 <html lang="de">
   <head>
@@ -34,7 +14,6 @@ import '../styles/global.css';
         <input type="password" id="pat" placeholder="GitHub PAT" class="w-full mb-4 px-4 py-3 border border-gray-200 bg-gray-50 focus:outline-none focus:border-black text-gray-900 text-base transition" />
         <button id="submit" class="w-full bg-black hover:bg-gray-900 text-white font-semibold py-3 transition mb-2">Einloggen</button>
         <div id="error" class="text-red-600 text-sm min-h-[1.5em] mt-2"></div>
->>>>>>> test
       </div>
     </main>
     <script type="module">
@@ -45,11 +24,7 @@ import '../styles/global.css';
       submitButton.addEventListener('click', async () => {
         const pat = patInput.value.trim();
         if (!pat) {
-<<<<<<< HEAD
-          errorDiv.textContent = 'Bitte geben Sie einen Token ein.';
-=======
           errorDiv.textContent = 'Bitte gib einen Personal Access Token ein.';
->>>>>>> test
           return;
         }
 
@@ -59,29 +34,6 @@ import '../styles/global.css';
           });
           if (response.ok) {
             sessionStorage.setItem('github_pat', pat);
-<<<<<<< HEAD
-            window.location.href = '/astro-edit-starter';
-          } else {
-            errorDiv.textContent = 'Ungültiger PAT.';
-          }
-        } catch (error) {
-          errorDiv.textContent = 'Fehler bei der Verbindung.';
-        }
-      });
-    </script>
-    <style>
-      .login-container {
-        max-width: 400px;
-        margin: 2em auto;
-        padding: 1em;
-        text-align: center;
-      }
-      .error {
-        color: red;
-        margin-top: 1em;
-      }
-    </style>
-=======
             window.location.href = '/astro-edit-starter/';
           } else {
             errorDiv.textContent = 'Ungültiger PAT. Bitte versuche es erneut.';
@@ -91,6 +43,5 @@ import '../styles/global.css';
         }
       });
     </script>
->>>>>>> test
   </body>
 </html>
