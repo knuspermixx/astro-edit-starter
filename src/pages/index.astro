@@ -1,14 +1,15 @@
 ---
+// Korrekter Client-Side Import für 'base'
 import { base } from "astro:config/client";
 import data from "../content/data.json";
 import Layout from "../layouts/Layout.astro";
 
-// Basis-URL aus astro.config.mjs holen (wichtig für Pfadberechnungen)
 const repo = 'knuspermixx/astro-edit-starter'; // Repository Name für API Calls
 
 // Daten für den Client vorbereiten
 const initialDataString = JSON.stringify(data); // Als String übergeben
-const initialDataForClient = data; // Objekt für Pfad-Lookup
+// initialDataForClient wird verwendet, um Original-Bildpfade nachzuschlagen
+const initialDataForClient = data;
 ---
 
 <Layout>
@@ -21,7 +22,7 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
     <button id="publish" class="px-2 py-1 hover:bg-gray-600 rounded">Veröffentlichen</button>
     <button id="logout" class="px-2 py-1 hover:bg-gray-600 rounded">Abmelden</button>
   </div>
-   <div id="status" class="text-sm ml-4 self-center"></div>
+   <div id="status" class="text-sm ml-4 self-center whitespace-nowrap"></div>
 </div>
 
 <nav class="py-6 border-b border-gray-200 bg-white">
@@ -44,8 +45,8 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
       <button class="bg-black text-white hover:bg-gray-900 py-2 px-6 transition-colors duration-300 border border-black shadow-none" contenteditable="false" data-key="hero.cta">{data.hero.cta}</button>
     </div>
     <div class="w-full md:w-3/5 py-6 text-center">
-      <img class="w-full md:w-4/5 mx-auto border border-gray-200 cursor-pointer" src={data.hero.image} alt="Hero Image" data-key="hero.image" id="img-hero-image" />
-      <input type="file" id="input-hero-image" class="hidden" accept="image/*" />
+      <img class="w-full md:w-4/5 mx-auto border border-gray-200 cursor-pointer editable-image" src={data.hero.image} alt="Hero Image" data-key="hero.image" id="img-hero-image" />
+      <input type="file" id="input-hero-image" class="hidden" accept="image/*" data-target-img="img-hero-image"/>
     </div>
   </div>
 </section>
@@ -53,8 +54,8 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
 <section id="about" class="py-20 bg-gray-50">
   <div class="container mx-auto px-6 flex flex-col md:flex-row items-center md:items-start">
     <div class="w-full md:w-1/3 flex justify-center md:justify-start mb-8 md:mb-0">
-      <img src={data.about.image} alt="About Us" class="w-40 h-40 object-cover rounded-full cursor-pointer" data-key="about.image" id="img-about-image"/>
-      <input type="file" id="input-about-image" class="hidden" accept="image/*" />
+      <img src={data.about.image} alt="About Us" class="w-40 h-40 object-cover rounded-full cursor-pointer editable-image" data-key="about.image" id="img-about-image"/>
+      <input type="file" id="input-about-image" class="hidden" accept="image/*" data-target-img="img-about-image"/>
     </div>
     <div class="w-full md:w-2/3 md:pl-12 flex flex-col justify-center">
       <h2 class="text-2xl font-bold mb-4 text-left text-gray-900 tracking-tight uppercase" contenteditable="false" data-key="about.title">{data.about.title}</h2>
@@ -65,15 +66,16 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
 
 <section id="features" class="py-16">
   <div class="container mx-auto px-6">
-    <h2 class="text-3xl font-bold text-center mb-12" contenteditable="false" data-key="features.0.title">Unsere Features</h2>
+    <h2 class="text-3xl font-bold text-center mb-12">Unsere Features</h2>
     <div class="flex flex-wrap -mx-6">
       {data.features.map((feature, index) => (
         <div class="w-full md:w-1/3 p-6">
           <div class="h-full text-center">
             <div class="mb-4 text-4xl">
-              {feature.icon === 'stars' && <span contenteditable="false">⭐</span>}
-              {feature.icon === 'lightbulb' && <span contenteditable="false">💡</span>}
-              {feature.icon === 'users' && <span contenteditable="false">👥</span>}
+              {/* Icons sind nicht editierbar */}
+              {feature.icon === 'stars' && <span>⭐</span>}
+              {feature.icon === 'lightbulb' && <span>💡</span>}
+              {feature.icon === 'users' && <span>👥</span>}
             </div>
             <h3 class="text-xl font-medium mb-3" contenteditable="false" data-key={`features.${index}.title`}>{feature.title}</h3>
             <p class="text-gray-600 leading-relaxed" contenteditable="false" data-key={`features.${index}.description`}>{feature.description}</p>
@@ -104,6 +106,7 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
         </div>
       </div>
       <div class="w-full md:w-1/3">
+         {/* Kontaktformular ist nicht editierbar */}
         <form class="p-6 border border-gray-200 bg-white shadow-none space-y-4">
           <div>
             <label for="name" class="block text-gray-800 text-sm mb-1 font-medium">Name</label>
@@ -134,368 +137,427 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
 </Layout>
 
 <script type="module" define:vars={{ initialDataString, initialDataForClient, base, repo }}>
-  // Initialer Zustand wird jetzt über define:vars übergeben und hier geparst
+
+  // --- Constants & Config ---
+  const GITHUB_API_BASE = 'https://api.github.com';
+  const DATA_JSON_PATH = 'src/content/data.json';
+  const IMAGE_REPO_BASE_PATH = 'public'; // Wo Bilder im Repo liegen (relativ zum Root)
+  const pat = sessionStorage.getItem('github_pat');
+
+  // --- State Variables ---
   const initialData = JSON.parse(initialDataString);
   let currentData = JSON.parse(initialDataString); // Aktueller Bearbeitungszustand
-  let history = [JSON.parse(initialDataString)]; // Startzustand für History
+  let history = [JSON.parse(initialDataString)];   // Zustand für Undo/Redo
   let historyIndex = 0;
-  let pendingImageUploads = {}; // Objekt für ausstehende Bild-Uploads: { repoPath: File }
+  let pendingImageUploads = {};                   // Vorgemerkte Bild-Uploads: { repoPath: { file: File, dataKey: string } }
+  let isPublishing = false;                         // Verhindert doppeltes Publishen
 
-  const pat = sessionStorage.getItem('github_pat');
+  // --- DOM Element References ---
   const toolbar = document.getElementById('toolbar');
   const statusDiv = document.getElementById('status');
   const publishButton = document.getElementById('publish');
+  const undoButton = document.getElementById('undo');
+  const redoButton = document.getElementById('redo');
+  const logoutButton = document.getElementById('logout');
+  const editableTextElements = document.querySelectorAll('[contenteditable][data-key]:not(img)');
+  const editableImageElements = document.querySelectorAll('img.editable-image[data-key]');
+  const fileInputElements = document.querySelectorAll('input[type="file"]');
 
   // --- Helper Functions ---
+
+  /** Zeigt eine Statusmeldung in der Toolbar an. */
   function updateStatus(message, isError = false) {
-    statusDiv.textContent = message;
-    statusDiv.style.color = isError ? 'red' : 'white';
+    if (statusDiv) {
+        statusDiv.textContent = message;
+        statusDiv.style.color = isError ? '#f87171' : '#ffffff'; // Rot für Fehler, sonst weiß
+    }
+    // Status nach 5 Sekunden ausblenden, außer bei Fehlern
+    if (!isError) {
+      setTimeout(() => {
+        if (statusDiv && statusDiv.textContent === message) {
+          statusDiv.textContent = '';
+        }
+      }, 5000);
+    }
   }
 
-  // Konvertiert einen Pfad aus data.json in einen Repository-Pfad
+  /** Konvertiert einen URL-Pfad aus data.json in einen Repository-Pfad. */
   function getRepoPath(dataPath) {
-     // Entfernt die Base-URL und führt 'public/' hinzu
-     // Annahme: Bilder in data.json sind wie /astro-edit-starter/images/name.jpg
-     // und liegen im Repo unter public/images/name.jpg
      const relativePath = dataPath.startsWith(base) ? dataPath.substring(base.length) : dataPath;
-     return `public${relativePath.startsWith('/') ? '' : '/'}${relativePath}`;
+     // Stellt sicher, dass der Pfad mit '/' beginnt und kombiniert ihn mit IMAGE_REPO_BASE_PATH
+     const cleanRelativePath = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath;
+     return `${IMAGE_REPO_BASE_PATH}/${cleanRelativePath}`.replace(/\/\//g, '/'); // Doppelte Slashes vermeiden
   }
 
-  // Konvertiert einen Data-Key (z.B. hero.image) zu einem Pfad im Repo
+  /** Ermittelt den Repository-Pfad für ein Bild anhand seines data-key. */
   function getRepoPathFromKey(key) {
+    // Nutzt die übergebenen initialen Daten, um den Originalpfad zu finden
     const pathInData = key.split('.').reduce((obj, k) => obj && obj[k], initialDataForClient);
     if (typeof pathInData === 'string') {
         return getRepoPath(pathInData);
     }
-    return null; // Falls der Key kein Bildpfad ist
+    console.warn(`Konnte keinen String-Pfad für Key ${key} in initialDataForClient finden.`);
+    return null;
   }
 
-
-  // Liest eine Datei als Base64
+  /** Liest eine Datei als Base64-String (nur der Datenanteil). */
   function readFileAsBase64(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => {
-        // Extrahiert nur den Base64-Teil aus dem Data URL
-        const base64String = reader.result.split(',')[1];
-        resolve(base64String);
+        const base64String = reader.result?.toString().split(',')[1];
+        if (base64String) {
+            resolve(base64String);
+        } else {
+            reject(new Error("Konnte Datei nicht als Base64 lesen."));
+        }
       };
       reader.onerror = (error) => reject(error);
-      reader.readAsDataURL(file); // Liest als Data URL, um Base64 zu erhalten
+      reader.readAsDataURL(file);
     });
   }
 
-   // Funktion zur sicheren Base64-Kodierung von UTF-8 Strings (für data.json)
+  /** Kodiert einen UTF-8 String sicher nach Base64. */
   function utf8ToBase64(str) {
     try {
-      // Diese Methode ist robuster für Unicode-Zeichen als einfaches btoa()
       return btoa(unescape(encodeURIComponent(str)));
     } catch (e) {
-      console.error("Fehler beim Base64-Kodieren:", e);
-      // Fallback oder alternative Methode hier, falls nötig
-      // Für dieses Beispiel geben wir einen leeren String zurück oder werfen den Fehler weiter
-      // throw e; // oder return '';
-      return btoa(str); // Versuch mit Standard btoa als Fallback (kann fehlschlagen)
+      console.error("Fehler beim Base64-Kodieren (utf8ToBase64):", e);
+      return btoa(str); // Fallback
     }
   }
 
-
-  // Holt den SHA einer Datei von GitHub
+  /** Holt den SHA-Hash einer Datei von GitHub. Gibt null zurück, wenn nicht gefunden, 'error' bei anderen Fehlern. */
   async function getFileSha(repoPath) {
-    const url = `https://api.github.com/repos/${repo}/contents/${repoPath}`;
+    if (!pat) return 'error'; // PAT benötigt
+    const url = `${GITHUB_API_BASE}/repos/${repo}/contents/${repoPath}`;
     try {
       const response = await fetch(url, {
-        headers: { Authorization: `token ${pat}` },
+        headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github.v3+json' },
       });
-      if (!response.ok) {
-        if (response.status === 404) return null; // Datei existiert nicht
-        throw new Error(`GitHub API Fehler (getFileSha ${repoPath}): ${response.status}`);
-      }
+      if (response.status === 404) return null; // Nicht gefunden ist ok, bedeutet neue Datei
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       return data.sha;
     } catch (error) {
-      console.error("Fehler beim Abrufen des SHA:", error);
-      updateStatus(`Fehler SHA ${repoPath}: ${error.message}`, true);
-      return 'error'; // Signalisiert einen Fehler
+      console.error(`Fehler beim Abrufen des SHA für ${repoPath}:`, error);
+      updateStatus(`Fehler SHA ${repoPath.split('/').pop()}: ${error.message}`, true);
+      return 'error';
     }
   }
 
-  // Lädt eine Datei auf GitHub hoch (oder aktualisiert sie)
+  /** Lädt eine Datei auf GitHub hoch oder aktualisiert sie. */
   async function uploadFileToGithub(repoPath, file, sha) {
-    const url = `https://api.github.com/repos/${repo}/contents/${repoPath}`;
+     if (!pat) return false; // PAT benötigt
+    const url = `${GITHUB_API_BASE}/repos/${repo}/contents/${repoPath}`;
     try {
       const content = await readFileAsBase64(file);
       const body = {
-        message: `Update image ${repoPath} via editor`,
+        message: `Update image ${repoPath.split('/').pop()} via editor`,
         content: content,
         branch: 'main',
-        sha: sha, // SHA der zu ersetzenden Datei (oder null, wenn neu)
+        sha: sha, // SHA ist null für neue Dateien, oder der SHA der zu ersetzenden Datei
       };
 
-      updateStatus(`Lade hoch: ${repoPath}...`);
+      updateStatus(`Lade hoch: ${repoPath.split('/').pop()}...`);
       const response = await fetch(url, {
         method: 'PUT',
         headers: {
           Authorization: `token ${pat}`,
           'Content-Type': 'application/json',
+          Accept: 'application/vnd.github.v3+json'
         },
         body: JSON.stringify(body),
       });
 
       if (!response.ok) {
-        throw new Error(`GitHub API Fehler (uploadFile ${repoPath}): ${response.status} ${await response.text()}`);
+        const errorData = await response.json();
+        throw new Error(`HTTP ${response.status}: ${errorData.message || 'Unbekannter Fehler'}`);
       }
-      updateStatus(`${repoPath} hochgeladen.`);
+      updateStatus(`${repoPath.split('/').pop()} hochgeladen.`);
       return true; // Erfolg
     } catch (error) {
-      console.error("Fehler beim Hochladen der Datei:", error);
-      updateStatus(`Upload-Fehler ${repoPath}: ${error.message}`, true);
+      console.error(`Fehler beim Hochladen der Datei ${repoPath}:`, error);
+      updateStatus(`Upload-Fehler ${repoPath.split('/').pop()}: ${error.message}`, true);
       return false; // Fehler
     }
   }
 
-  // --- Initialisierung & Event Listeners ---
+  // --- State Management Functions ---
 
-  if (pat) {
-    toolbar.classList.remove('hidden');
-    document.querySelectorAll('[contenteditable="false"][data-key]').forEach(el => {
-      el.setAttribute('contenteditable', 'true');
-    });
-  } else {
-    toolbar.classList.add('hidden'); // Sicherstellen, dass Toolbar versteckt ist
-     document.querySelectorAll('[contenteditable="true"][data-key]').forEach(el => {
-      el.setAttribute('contenteditable', 'false'); // Bearbeitung deaktivieren
-    });
-  }
-
-  // Speichern des Zustands (nur Textdaten)
+  /** Speichert den aktuellen Text-Zustand in der History. */
   function saveState() {
-    // Tiefenkopie erstellen, um Referenzprobleme zu vermeiden
     const stateToSave = JSON.parse(JSON.stringify(currentData));
+    // Nur speichern, wenn sich wirklich was geändert hat (optional, aber vermeidet leere History-Einträge)
+    if (JSON.stringify(stateToSave) === JSON.stringify(history[historyIndex])) {
+        return;
+    }
     if (historyIndex < history.length - 1) {
       history = history.slice(0, historyIndex + 1);
     }
     history.push(stateToSave);
     historyIndex++;
+    // Update Button States
+    updateUndoRedoButtons();
   }
 
-  // Anwenden eines Zustands (nur Textdaten)
+  /** Wendet einen Zustand aus der History an (nur Text). */
   function applyState(state) {
-    currentData = JSON.parse(JSON.stringify(state));
-    document.querySelectorAll('[data-key]').forEach(el => {
+    currentData = JSON.parse(JSON.stringify(state)); // Tiefenkopie
+    editableTextElements.forEach(el => {
       const key = el.dataset.key;
-      // Finde den Wert im aktuellen Zustand
-      let value = key.split('.').reduce((obj, k) => obj && obj[k], currentData);
-
-      // Aktualisiere nur Textinhalte, keine Bilder (die haben eigene Vorschau)
-      if (el.tagName !== 'IMG') {
-         if (el.textContent !== value) { // Nur aktualisieren, wenn nötig
-             el.textContent = value;
-         }
+      const value = key.split('.').reduce((obj, k) => obj && obj[k], currentData);
+      if (el.textContent !== value && value !== undefined) {
+        el.textContent = value;
       }
-      // Bildpfade werden nicht durch applyState geändert,
-      // da sie statisch bleiben sollen und die Vorschau separat läuft.
     });
-     // Nach ApplyState ggf. Status löschen
-     updateStatus('');
+    updateUndoRedoButtons();
+    updateStatus(''); // Status löschen bei Undo/Redo
   }
 
-  // Logout
-  document.getElementById('logout').addEventListener('click', () => {
+   /** Aktualisiert den Aktivierungszustand der Undo/Redo-Buttons. */
+  function updateUndoRedoButtons() {
+    if (undoButton) undoButton.disabled = historyIndex <= 0;
+    if (redoButton) redoButton.disabled = historyIndex >= history.length - 1;
+  }
+
+
+  // --- Event Handlers ---
+
+  /** Behandelt den Logout-Klick. */
+  function handleLogout() {
     sessionStorage.removeItem('github_pat');
     window.location.reload();
-  });
+  }
 
-  // Klick auf Bild -> Trigger Input
-  document.querySelectorAll('img[data-key]').forEach(img => {
-    img.addEventListener('click', () => {
-      if (!pat) return;
-      // Input-Feld basierend auf data-key finden
-       const dataKey = img.dataset.key;
-       const inputId = `input-${dataKey.replace(/\./g, '-')}`; // Punkte durch Bindestriche ersetzen
-      const input = document.getElementById(inputId);
-      if (input) {
-          input.click();
-      } else {
-          console.error(`Input-Feld mit ID ${inputId} nicht gefunden für Bild ${dataKey}`);
-      }
-    });
-  });
+  /** Behandelt den Klick auf ein editierbares Bild. */
+  function handleImageClick(event) {
+     if (!pat || isPublishing) return;
+    const img = event.currentTarget;
+    const inputId = `input-${img.dataset.key.replace(/\./g, '-')}`;
+    const input = document.getElementById(inputId);
+    if (input) {
+      input.click();
+    } else {
+      console.error(`Input-Feld mit ID ${inputId} nicht gefunden.`);
+    }
+  }
 
-  // Bild-Input Änderung
-  document.querySelectorAll('input[type="file"]').forEach(input => {
-    input.addEventListener('change', (event) => {
-       if (!pat) return;
-      const file = event.target.files[0];
-      if (file) {
-        // Finde das zugehörige Bild-Element
-         const dataKey = input.id.replace('input-', '').replace(/-/g, '.'); // ID zurück zu data-key Format
-        const img = document.querySelector(`img[data-key="${dataKey}"]`);
+  /** Behandelt die Auswahl einer neuen Bilddatei. */
+  function handleFileInputChange(event) {
+    if (!pat || isPublishing) return;
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (file) {
+      const dataKey = input.id.replace('input-', '').replace(/-/g, '.');
+      const img = document.getElementById(input.dataset.targetImg); // Verwende data-target-img
 
-        if (img) {
-          // Lokale Vorschau aktualisieren
-          const objectURL = URL.createObjectURL(file);
-          img.src = objectURL;
-          // Alte Object URL freigeben, falls vorhanden (optional, zur Speicherverwaltung)
-          // if (img.dataset.objectUrl) { URL.revokeObjectURL(img.dataset.objectUrl); }
-          // img.dataset.objectUrl = objectURL; // Speichere neue URL für späteres Freigeben
+      if (img) {
+        // Lokale Vorschau aktualisieren
+        const objectURL = URL.createObjectURL(file);
+        img.src = objectURL; // Aktualisiere src für Vorschau
+        // Optional: Alte Object URL freigeben, falls vorhanden
+        if (img.dataset.objectUrl) { URL.revokeObjectURL(img.dataset.objectUrl); }
+        img.dataset.objectUrl = objectURL;
 
-
-          // Originalen Repository-Pfad aus initialData holen
-          const repoPath = getRepoPathFromKey(dataKey);
-          if (repoPath) {
-              // Datei zum Hochladen vormerken
-              pendingImageUploads[repoPath] = file;
-              updateStatus(`${file.name} zum Hochladen vorgemerkt.`);
-              // Wichtig: currentData wird NICHT geändert, der Pfad bleibt gleich!
-          } else {
-              console.error(`Konnte Repository-Pfad für ${dataKey} nicht ermitteln.`);
-              updateStatus(`Fehler: Pfad für ${dataKey} nicht gefunden.`, true);
-          }
-
+        // Repository-Pfad ermitteln
+        const repoPath = getRepoPathFromKey(dataKey);
+        if (repoPath) {
+          // Datei UND dataKey zum Hochladen vormerken
+          pendingImageUploads[repoPath] = { file: file, dataKey: dataKey };
+          updateStatus(`${file.name} zum Hochladen vorgemerkt.`);
         } else {
-            console.error(`Bild-Element für Input ${input.id} (Key: ${dataKey}) nicht gefunden.`);
+          console.error(`Konnte Repository-Pfad für ${dataKey} nicht ermitteln.`);
+          updateStatus(`Fehler: Pfad für ${dataKey} nicht gefunden.`, true);
         }
+      } else {
+        console.error(`Bild-Element für Input ${input.id} nicht gefunden.`);
       }
-    });
-  });
+    }
+  }
 
+  /** Behandelt Texteingaben in contenteditable-Feldern. */
+  function handleTextInput(event) {
+    if (!pat || isPublishing) return;
+    const el = event.currentTarget;
+    const keyParts = el.dataset.key.split('.');
+    let obj = currentData;
+    try {
+      for (let i = 0; i < keyParts.length - 1; i++) {
+        // Sicherstellen, dass Zwischenobjekte existieren
+        if (!obj[keyParts[i]]) obj[keyParts[i]] = {};
+        obj = obj[keyParts[i]];
+      }
+      // Wert nur setzen, wenn der letzte Key gültig ist
+      if (typeof obj === 'object' && obj !== null) {
+          obj[keyParts[keyParts.length - 1]] = el.textContent;
+          saveState(); // Zustand speichern
+      } else {
+           console.warn(`Ungültiger Pfad oder Typ in currentData für Key ${el.dataset.key}`);
+      }
+    } catch (e) {
+      console.error(`Fehler beim Aktualisieren von currentData für Key ${el.dataset.key}:`, e);
+    }
+  }
 
-  // Bearbeitbare Texte
-  document.querySelectorAll('[contenteditable][data-key]').forEach(el => {
-     // Sicherstellen, dass nur Text-Elemente einen Input-Listener bekommen
-     if (el.tagName !== 'IMG') {
-         el.addEventListener('input', () => {
-             if (!pat) return;
-             const keyParts = el.dataset.key.split('.');
-             let obj = currentData;
-             try {
-                 for (let i = 0; i < keyParts.length - 1; i++) {
-                     obj = obj[keyParts[i]];
-                 }
-                 // Verhindern, dass der state durch Bearbeiten von nicht-Text Nodes kaputt geht
-                 if (typeof obj === 'object' && obj !== null && keyParts[keyParts.length-1] in obj) {
-                    obj[keyParts[keyParts.length - 1]] = el.textContent;
-                    // Nur speichern, wenn sich der Text tatsächlich geändert hat
-                    // und es sich um eine Texteigenschaft handelt
-                    saveState();
-                 } else {
-                    console.warn(`Konnte Key ${el.dataset.key} in currentData nicht sicher setzen.`);
-                 }
-             } catch(e) {
-                 console.error(`Fehler beim Aktualisieren von currentData für Key ${el.dataset.key}`, e);
-             }
-         });
-     }
-  });
-
-  // Undo
-  document.getElementById('undo').addEventListener('click', () => {
-    if (!pat) return;
+  /** Behandelt Undo-Klick. */
+  function handleUndo() {
+    if (!pat || isPublishing) return;
     if (historyIndex > 0) {
       historyIndex--;
       applyState(history[historyIndex]);
     }
-  });
+  }
 
-  // Redo
-  document.getElementById('redo').addEventListener('click', () => {
-    if (!pat) return;
+  /** Behandelt Redo-Klick. */
+  function handleRedo() {
+    if (!pat || isPublishing) return;
     if (historyIndex < history.length - 1) {
       historyIndex++;
       applyState(history[historyIndex]);
     }
-  });
+  }
 
-  // Veröffentlichen
-  publishButton.addEventListener('click', async () => {
-    if (!pat) return;
-    publishButton.disabled = true; // Button deaktivieren während des Vorgangs
+  /** Behandelt den Klick auf "Veröffentlichen". */
+  async function handlePublish() {
+    if (!pat || isPublishing) return; // Verhindere doppeltes Klicken
+
+    isPublishing = true;
+    publishButton.disabled = true;
+    undoButton.disabled = true; // Auch Undo/Redo während Publish sperren
+    redoButton.disabled = true;
     updateStatus('Starte Veröffentlichung...');
 
-    let imagesUploaded = true; // Flag für Erfolg der Bild-Uploads
+    let imagesUploadedSuccessfully = true;
+    let dataToCommit = JSON.parse(JSON.stringify(currentData)); // Arbeitskopie für Cache-Busting
+    let commitMessage = "Update data.json from live editor";
 
-    // 1. Bilder hochladen (falls vorhanden)
-    const imagePaths = Object.keys(pendingImageUploads);
-    if (imagePaths.length > 0) {
-        updateStatus(`Lade ${imagePaths.length} Bild(er) hoch...`);
-        for (const repoPath of imagePaths) {
-            const file = pendingImageUploads[repoPath];
-            const currentSha = await getFileSha(repoPath);
+    // --- Schritt 1: Bilder hochladen (falls vorhanden) ---
+    const imagePathsToUpload = Object.keys(pendingImageUploads);
+    if (imagePathsToUpload.length > 0) {
+      commitMessage += ` (updating ${imagePathsToUpload.length} image(s))`;
+      updateStatus(`Lade ${imagePathsToUpload.length} Bild(er) hoch...`);
 
-            if(currentSha === 'error') {
-                imagesUploaded = false;
-                updateStatus(`Fehler beim Abrufen des SHA für ${repoPath}. Upload abgebrochen.`, true);
-                break; // Weitere Uploads stoppen
-            }
+      for (const repoPath of imagePathsToUpload) {
+        const { file, dataKey } = pendingImageUploads[repoPath];
+        const currentSha = await getFileSha(repoPath); // SHA holen
 
-            const success = await uploadFileToGithub(repoPath, file, currentSha);
-            if (!success) {
-                imagesUploaded = false;
-                updateStatus(`Fehler beim Hochladen von ${repoPath}. Publish abgebrochen.`, true);
-                break; // Weitere Uploads stoppen
-            }
+        if (currentSha === 'error') { // SHA-Fehler stoppt den Prozess
+          imagesUploadedSuccessfully = false;
+          updateStatus(`Fehler beim Abrufen des SHA für ${repoPath.split('/').pop()}. Abbruch.`, true);
+          break;
         }
-        // Vorgemerkte Uploads löschen, wenn erfolgreich oder abgebrochen
-        pendingImageUploads = {};
+
+        const success = await uploadFileToGithub(repoPath, file, currentSha); // Bild hochladen
+        if (!success) { // Upload-Fehler stoppt den Prozess
+          imagesUploadedSuccessfully = false;
+          updateStatus(`Fehler beim Hochladen von ${repoPath.split('/').pop()}. Abbruch.`, true);
+          break;
+        } else {
+          // Cache Busting: Pfad in dataToCommit aktualisieren
+          const originalPath = dataKey.split('.').reduce((obj, k) => obj?.[k], initialDataForClient);
+          if (typeof originalPath === 'string') {
+            let obj = dataToCommit;
+            const keyParts = dataKey.split('.');
+            for (let i = 0; i < keyParts.length - 1; i++) { obj = obj[keyParts[i]]; }
+            obj[keyParts[keyParts.length - 1]] = originalPath.split('?')[0] + '?t=' + Date.now(); // Zeitstempel anhängen
+          }
+        }
+      }
+      pendingImageUploads = {}; // Vorgemerkte Uploads leeren
     } else {
-        updateStatus('Keine neuen Bilder zum Hochladen.');
+      updateStatus('Keine neuen Bilder zum Hochladen.');
     }
 
+    // --- Schritt 2: data.json aktualisieren (nur wenn Bilder ok waren) ---
+    // Wichtiger Hinweis: Dies ist *kein* atomarer Commit mit den Bildern.
+    // Die GitHub Contents API aktualisiert Dateien einzeln. Ein atomarer Commit
+    // würde die komplexere Git Trees API erfordern.
+    if (imagesUploadedSuccessfully) {
+      updateStatus('Aktualisiere data.json...');
+      try {
+        const dataSha = await getFileSha(DATA_JSON_PATH); // SHA von data.json holen
+        if (dataSha === 'error') throw new Error("Konnte SHA von data.json nicht abrufen.");
 
-    // 2. data.json aktualisieren (nur wenn Bilder erfolgreich waren oder keine Bilder da waren)
-    if (imagesUploaded) {
-        updateStatus('Aktualisiere data.json...');
-        const dataPath = 'src/content/data.json';
-        const dataUrl = `https://api.github.com/repos/${repo}/contents/${dataPath}`;
+        // Nur committen, wenn sich Daten geändert haben (oder Bilder hochgeladen wurden)
+        const currentContentString = JSON.stringify(dataToCommit, null, 2);
+        const initialContentString = JSON.stringify(history[0], null, 2); // Vergleiche mit dem allerersten Zustand
 
-        try {
-            // Aktuellen SHA von data.json holen
-            const getDataResponse = await fetch(dataUrl, {
-                headers: { Authorization: `token ${pat}` },
-            });
-            if (!getDataResponse.ok) {
-                 throw new Error(`Fehler beim Holen von data.json SHA: ${getDataResponse.status}`);
-            }
-            const { sha: dataSha } = await getDataResponse.json();
+        if (currentContentString !== initialContentString || imagePathsToUpload.length > 0) {
 
-            // Neue Dateiinhalte (Textänderungen) sicher kodieren
-            const content = utf8ToBase64(JSON.stringify(currentData, null, 2));
+            const content = utf8ToBase64(currentContentString);
             const body = {
-                message: `Update data.json from live editor ${imagePaths.length > 0 ? '(with image updates)' : ''}`,
+                message: commitMessage,
                 content,
-                sha: dataSha,
+                sha: dataSha, // Muss der aktuelle SHA sein
                 branch: 'main',
             };
 
-            const response = await fetch(dataUrl, {
+            const response = await fetch(`${GITHUB_API_BASE}/repos/${repo}/contents/${DATA_JSON_PATH}`, {
                 method: 'PUT',
-                headers: {
-                    Authorization: `token ${pat}`,
-                    'Content-Type': 'application/json',
-                },
+                headers: { Authorization: `token ${pat}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github.v3+json' },
                 body: JSON.stringify(body),
             });
 
-            if (response.ok) {
-                updateStatus('Änderungen erfolgreich veröffentlicht!');
-                // Optional: Verlauf zurücksetzen nach erfolgreichem Publish
-                history = [JSON.parse(JSON.stringify(currentData))];
-                historyIndex = 0;
-            } else {
-                 const errorText = await response.text();
-                 throw new Error(`Fehler beim Veröffentlichen von data.json: ${response.status} ${errorText}`);
+            if (!response.ok) {
+                 const errorData = await response.json();
+                 throw new Error(`HTTP ${response.status}: ${errorData.message || 'Unbekannter Fehler'}`);
             }
-        } catch (error) {
-            console.error("Fehler beim Veröffentlichen von data.json:", error);
-            updateStatus(`Fehler data.json: ${error.message}`, true);
+
+            updateStatus('Änderungen erfolgreich veröffentlicht!');
+            // Zustand und History nach erfolgreichem Publish aktualisieren/zurücksetzen
+            currentData = JSON.parse(JSON.stringify(dataToCommit)); // Übernehme Cache-Busting-Pfade
+            history = [JSON.parse(JSON.stringify(currentData))]; // Setze History zurück
+            historyIndex = 0;
+            applyState(currentData); // Wende den neuen Zustand an (aktualisiert auch Button-States)
+
+        } else {
+             updateStatus('Keine Änderungen zum Veröffentlichen in data.json.');
         }
+
+      } catch (error) {
+        console.error("Fehler beim Veröffentlichen von data.json:", error);
+        updateStatus(`Fehler data.json: ${error.message}`, true);
+      }
     } else {
-        updateStatus('Veröffentlichung von data.json übersprungen wegen Bild-Upload-Fehler.', true);
+      updateStatus('Veröffentlichung von data.json übersprungen (Bild-Fehler).', true);
     }
 
+    // --- Aufräumen ---
+    isPublishing = false;
     publishButton.disabled = false; // Button wieder aktivieren
-    // Status nach einiger Zeit löschen
-    setTimeout(() => updateStatus(''), 5000);
-  });
+    updateUndoRedoButtons(); // Undo/Redo Buttons Status aktualisieren
+  }
+
+  // --- Initialisierung ---
+  function initializeEditor() {
+    if (pat && toolbar) {
+      toolbar.classList.remove('hidden');
+      // Event Listeners hinzufügen
+      logoutButton?.addEventListener('click', handleLogout);
+      undoButton?.addEventListener('click', handleUndo);
+      redoButton?.addEventListener('click', handleRedo);
+      publishButton?.addEventListener('click', handlePublish);
+
+      editableTextElements.forEach(el => el.addEventListener('input', handleTextInput));
+      editableImageElements.forEach(img => img.addEventListener('click', handleImageClick));
+      fileInputElements.forEach(input => input.addEventListener('change', handleFileInputChange));
+
+      // Initialen Zustand der Editierbarkeit setzen
+      editableTextElements.forEach(el => el.setAttribute('contenteditable', 'true'));
+      editableImageElements.forEach(img => img.style.cursor = 'pointer');
+
+    } else if (toolbar) {
+      toolbar.classList.add('hidden'); // Sicherstellen, dass Toolbar versteckt ist
+      // Editierbarkeit entfernen
+       editableTextElements.forEach(el => el.setAttribute('contenteditable', 'false'));
+       editableImageElements.forEach(img => img.style.cursor = 'default');
+    }
+    // Initialen Button-Status setzen
+    updateUndoRedoButtons();
+  }
+
+  // --- Editor starten ---
+  initializeEditor();
+
 </script>
