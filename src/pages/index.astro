@@ -205,16 +205,32 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
 
   // --- Initialisierung & Event Listeners ---
 
+  // Funktion zum Anhängen des Input-Listeners an ein Element
+  function attachInputListener(el) {
+    if (!el || el.tagName === 'IMG' || !el.hasAttribute('data-key')) return;
+
+    el.addEventListener('input', () => {
+      if (!pat) return;
+      const key = el.dataset.key;
+      try {
+        // Verwende die Hilfsfunktion, um den Wert sicher zu setzen
+        setValueByKeyPath(currentData, key, el.textContent);
+        saveState();
+      } catch(e) {
+        console.error(`Fehler beim Aktualisieren von currentData für Key ${key}`, e);
+      }
+    });
+  }
+
   if (pat) {
     toolbar.classList.remove('hidden');
     document.querySelectorAll('[contenteditable="false"][data-key]').forEach(el => {
       el.setAttribute('contenteditable', 'true');
+      attachInputListener(el); // Listener für initial bearbeitbare Elemente anhängen
     });
   } else {
     toolbar.classList.add('hidden');
-    document.querySelectorAll('[contenteditable="true"][data-key]').forEach(el => {
-      el.setAttribute('contenteditable', 'false');
-    });
+    // Kein contenteditable="true" setzen, wenn nicht eingeloggt
   }
 
   // Speichern des Zustands (Text- und Bilddaten)
@@ -297,29 +313,8 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
     });
   });
 
-  // Bearbeitbare Texte
-  document.querySelectorAll('[contenteditable][data-key]').forEach(el => {
-    if (el.tagName !== 'IMG') {
-      el.addEventListener('input', () => {
-        if (!pat) return;
-        const keyParts = el.dataset.key.split('.');
-        let obj = currentData;
-        try {
-          for (let i = 0; i < keyParts.length - 1; i++) {
-            obj = obj[keyParts[i]];
-          }
-          if (typeof obj === 'object' && obj !== null && keyParts[keyParts.length-1] in obj) {
-            obj[keyParts[keyParts.length - 1]] = el.textContent;
-            saveState();
-          } else {
-            console.warn(`Konnte Key ${el.dataset.key} in currentData nicht sicher setzen.`);
-          }
-        } catch(e) {
-          console.error(`Fehler beim Aktualisieren von currentData für Key ${el.dataset.key}`, e);
-        }
-      });
-    }
-  });
+  // Bearbeitbare Texte (Initialisierung für bereits vorhandene Elemente)
+  // Die Listener werden jetzt im `if (pat)` Block oben angehängt.
 
   // Undo
   document.getElementById('undo').addEventListener('click', () => {
@@ -428,6 +423,7 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
     const featureItem = document.createElement('div');
     featureItem.className = 'w-full md:w-1/3 p-6 feature-item';
     featureItem.dataset.index = index;
+    // Generiere das HTML für das Feature
     featureItem.innerHTML = `
       <div class="h-full text-center">
         <div class="mb-4 text-4xl">
@@ -440,74 +436,88 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
         <button class="delete-feature-btn bg-red-500 text-white rounded px-2 py-1 mt-2 ${pat ? '' : 'hidden'}" data-index="${index}" type="button">Löschen</button>
       </div>
     `;
-    // Bearbeitbarkeit für neue Elemente setzen, falls im Edit-Modus
+
+    // Bearbeitbarkeit und Listener für neue Elemente setzen, falls im Edit-Modus
     if (pat) {
-      featureItem.querySelectorAll('[contenteditable="false"][data-key]').forEach(el => {
-        el.setAttribute('contenteditable', 'true');
-        // Hier müssten ggf. die 'input' Listener neu angehängt werden, wenn sie benötigt werden
-        // Für diese einfache Add/Delete-Aktion ist es vorerst nicht nötig.
-      });
+      const titleEl = featureItem.querySelector(`[data-key="features.${index}.title"]`);
+      const descEl = featureItem.querySelector(`[data-key="features.${index}.description"]`);
+      if (titleEl) {
+        titleEl.setAttribute('contenteditable', 'true');
+        attachInputListener(titleEl); // Listener anhängen
+      }
+      if (descEl) {
+        descEl.setAttribute('contenteditable', 'true');
+        attachInputListener(descEl); // Listener anhängen
+      }
     }
     return featureItem;
   }
 
-  // Funktion zum Aktualisieren der Indizes nach dem Löschen
-  function updateFeatureIndices() {
+  // Funktion zum Aktualisieren der Indizes und Keys nach dem Löschen
+  function updateFeatureIndicesAndKeys() {
     const featureItems = document.querySelectorAll('#features-list .feature-item');
     featureItems.forEach((item, index) => {
-      item.dataset.index = index;
+      item.dataset.index = index; // Update data-index attribute
       const titleEl = item.querySelector('[data-key^="features."][data-key$=".title"]');
       const descEl = item.querySelector('[data-key^="features."][data-key$=".description"]');
       const deleteBtn = item.querySelector('.delete-feature-btn');
-      if (titleEl) titleEl.dataset.key = `features.${index}.title`;
-      if (descEl) descEl.dataset.key = `features.${index}.description`;
+
+      const newTitleKey = `features.${index}.title`;
+      const newDescKey = `features.${index}.description`;
+
+      if (titleEl) titleEl.dataset.key = newTitleKey;
+      if (descEl) descEl.dataset.key = newDescKey;
       if (deleteBtn) deleteBtn.dataset.index = index;
+
+      // Wichtig: Auch die Listener neu anhängen, da sich der Key geändert hat!
+      // Entferne alte Listener (optional, aber sauberer)
+      // titleEl?.removeEventListener('input', ...); // Geht so nicht einfach
+      // Stattdessen: Erstelle das Element neu oder hänge Listener basierend auf dem neuen Key an.
+      // Einfacher Ansatz: Wir gehen davon aus, dass die Listener durch attachInputListener korrekt funktionieren,
+      // da sie den Key dynamisch aus `el.dataset.key` lesen.
     });
   }
 
+  // Event Listener für DOMContentLoaded
   document.addEventListener('DOMContentLoaded', () => {
-    renderFeatureButtons();
+    renderFeatureButtons(); // Buttons initial rendern
     const featuresList = document.getElementById('features-list');
+    if (!featuresList) return; // Sicherstellen, dass die Liste existiert
 
-    // Delete Feature
-    featuresList?.addEventListener('click', (e) => {
+    // Event Delegation für Delete Buttons
+    featuresList.addEventListener('click', (e) => {
       const btn = e.target.closest('.delete-feature-btn');
-      if (!pat || !btn) return; // Nicht der Button oder nicht eingeloggt
-      e.preventDefault(); // Standardverhalten verhindern
+      if (!pat || !btn) return;
+      e.preventDefault();
       const idx = parseInt(btn.dataset.index);
       if (!isNaN(idx) && currentData.features.length > 1) {
-        currentData.features.splice(idx, 1); // Daten aktualisieren
+        currentData.features.splice(idx, 1);
         saveState();
-        // Element aus DOM entfernen
         const itemToRemove = featuresList.querySelector(`.feature-item[data-index="${idx}"]`);
-        if (itemToRemove) {
-          itemToRemove.remove();
-        }
-        updateFeatureIndices(); // Indizes der verbleibenden Elemente anpassen
-        renderFeatureButtons(); // Buttons neu rendern (falls nötig)
+        itemToRemove?.remove();
+        updateFeatureIndicesAndKeys(); // Indizes und Keys anpassen
+        // renderFeatureButtons(); // Nicht nötig, da Buttons nicht betroffen sind
       }
-      return false; // Zusätzliche Maßnahme gegen Standardverhalten
+      return false;
     });
 
-    // Add Feature
+    // Event Listener für Add Button
     document.getElementById('add-feature-btn')?.addEventListener('click', (e) => {
-      if (!pat) return false; // Nicht eingeloggt
-      e.preventDefault(); // Standardverhalten verhindern
-      const newFeature = {
+      if (!pat) return false;
+      e.preventDefault();
+      const newFeatureData = {
         title: 'Neues Feature',
         description: 'Beschreibung...',
-        icon: 'stars'
+        icon: 'stars' // Standard-Icon
       };
-      currentData.features.push(newFeature); // Daten aktualisieren
+      currentData.features.push(newFeatureData);
       saveState();
-      // Neues Element erstellen und hinzufügen
       const newIndex = currentData.features.length - 1;
-      const newElement = createFeatureElement(newFeature, newIndex);
-      if (featuresList) {
-        featuresList.appendChild(newElement);
-      }
-      renderFeatureButtons(); // Buttons neu rendern (falls nötig)
-      return false; // Zusätzliche Maßnahme gegen Standardverhalten
+      const newElement = createFeatureElement(newFeatureData, newIndex);
+      featuresList.appendChild(newElement);
+      // renderFeatureButtons(); // Nicht nötig, da Buttons nicht betroffen sind
+      return false;
     });
   });
+
 </script>
