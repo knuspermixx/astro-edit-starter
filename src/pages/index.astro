@@ -66,9 +66,9 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
 <section id="features" class="py-16">
   <div class="container mx-auto px-6">
     <h2 class="text-3xl font-bold text-center mb-12" contenteditable="false" data-key="features.0.title">Unsere Features</h2>
-    <div class="flex flex-wrap -mx-6">
+    <div id="features-list" class="flex flex-wrap -mx-6">
       {data.features.map((feature, index) => (
-        <div class="w-full md:w-1/3 p-6">
+        <div class="w-full md:w-1/3 p-6 feature-item" data-index={index}>
           <div class="h-full text-center">
             <div class="mb-4 text-4xl">
               {feature.icon === 'stars' && <span contenteditable="false">⭐</span>}
@@ -77,9 +77,13 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
             </div>
             <h3 class="text-xl font-medium mb-3" contenteditable="false" data-key={`features.${index}.title`}>{feature.title}</h3>
             <p class="text-gray-600 leading-relaxed" contenteditable="false" data-key={`features.${index}.description`}>{feature.description}</p>
+            <button class="delete-feature-btn bg-red-500 text-white rounded px-2 py-1 mt-2 hidden" data-index={index} type="button">Löschen</button>
           </div>
         </div>
       ))}
+    </div>
+    <div class="text-center mt-6">
+      <button id="add-feature-btn" class="bg-black text-white px-4 py-2 rounded hidden" type="button">Feature hinzufügen</button>
     </div>
   </div>
 </section>
@@ -407,5 +411,103 @@ const initialDataForClient = data; // Objekt für Pfad-Lookup
     }
     publishButton.disabled = false;
     setTimeout(() => updateStatus(''), 5000);
+  });
+
+  // --- Features: Add/Delete ---
+  function renderFeatureButtons() {
+    const isEdit = !!pat;
+    document.querySelectorAll('.delete-feature-btn').forEach(btn => {
+      btn.classList.toggle('hidden', !isEdit);
+    });
+    const addBtn = document.getElementById('add-feature-btn');
+    if (addBtn) addBtn.classList.toggle('hidden', !isEdit);
+  }
+
+  // Funktion zum Erstellen eines einzelnen Feature-Elements (Helper)
+  function createFeatureElement(feature, index) {
+    const featureItem = document.createElement('div');
+    featureItem.className = 'w-full md:w-1/3 p-6 feature-item';
+    featureItem.dataset.index = index;
+    featureItem.innerHTML = `
+      <div class="h-full text-center">
+        <div class="mb-4 text-4xl">
+          ${feature.icon === 'stars' ? '<span contenteditable="false">⭐</span>' : ''}
+          ${feature.icon === 'lightbulb' ? '<span contenteditable="false">💡</span>' : ''}
+          ${feature.icon === 'users' ? '<span contenteditable="false">👥</span>' : ''}
+        </div>
+        <h3 class="text-xl font-medium mb-3" contenteditable="false" data-key="features.${index}.title">${feature.title}</h3>
+        <p class="text-gray-600 leading-relaxed" contenteditable="false" data-key="features.${index}.description">${feature.description}</p>
+        <button class="delete-feature-btn bg-red-500 text-white rounded px-2 py-1 mt-2 ${pat ? '' : 'hidden'}" data-index="${index}" type="button">Löschen</button>
+      </div>
+    `;
+    // Bearbeitbarkeit für neue Elemente setzen, falls im Edit-Modus
+    if (pat) {
+      featureItem.querySelectorAll('[contenteditable="false"][data-key]').forEach(el => {
+        el.setAttribute('contenteditable', 'true');
+        // Hier müssten ggf. die 'input' Listener neu angehängt werden, wenn sie benötigt werden
+        // Für diese einfache Add/Delete-Aktion ist es vorerst nicht nötig.
+      });
+    }
+    return featureItem;
+  }
+
+  // Funktion zum Aktualisieren der Indizes nach dem Löschen
+  function updateFeatureIndices() {
+    const featureItems = document.querySelectorAll('#features-list .feature-item');
+    featureItems.forEach((item, index) => {
+      item.dataset.index = index;
+      const titleEl = item.querySelector('[data-key^="features."][data-key$=".title"]');
+      const descEl = item.querySelector('[data-key^="features."][data-key$=".description"]');
+      const deleteBtn = item.querySelector('.delete-feature-btn');
+      if (titleEl) titleEl.dataset.key = `features.${index}.title`;
+      if (descEl) descEl.dataset.key = `features.${index}.description`;
+      if (deleteBtn) deleteBtn.dataset.index = index;
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    renderFeatureButtons();
+    const featuresList = document.getElementById('features-list');
+
+    // Delete Feature
+    featuresList?.addEventListener('click', (e) => {
+      const btn = e.target.closest('.delete-feature-btn');
+      if (!pat || !btn) return; // Nicht der Button oder nicht eingeloggt
+      e.preventDefault(); // Standardverhalten verhindern
+      const idx = parseInt(btn.dataset.index);
+      if (!isNaN(idx) && currentData.features.length > 1) {
+        currentData.features.splice(idx, 1); // Daten aktualisieren
+        saveState();
+        // Element aus DOM entfernen
+        const itemToRemove = featuresList.querySelector(`.feature-item[data-index="${idx}"]`);
+        if (itemToRemove) {
+          itemToRemove.remove();
+        }
+        updateFeatureIndices(); // Indizes der verbleibenden Elemente anpassen
+        renderFeatureButtons(); // Buttons neu rendern (falls nötig)
+      }
+      return false; // Zusätzliche Maßnahme gegen Standardverhalten
+    });
+
+    // Add Feature
+    document.getElementById('add-feature-btn')?.addEventListener('click', (e) => {
+      if (!pat) return false; // Nicht eingeloggt
+      e.preventDefault(); // Standardverhalten verhindern
+      const newFeature = {
+        title: 'Neues Feature',
+        description: 'Beschreibung...',
+        icon: 'stars'
+      };
+      currentData.features.push(newFeature); // Daten aktualisieren
+      saveState();
+      // Neues Element erstellen und hinzufügen
+      const newIndex = currentData.features.length - 1;
+      const newElement = createFeatureElement(newFeature, newIndex);
+      if (featuresList) {
+        featuresList.appendChild(newElement);
+      }
+      renderFeatureButtons(); // Buttons neu rendern (falls nötig)
+      return false; // Zusätzliche Maßnahme gegen Standardverhalten
+    });
   });
 </script>
