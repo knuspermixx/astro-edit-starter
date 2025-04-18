@@ -1,10 +1,8 @@
 ---
-import { getCollection } from 'astro:content';
-import Layout from "../layouts/Layout.astro";
+import globalData from "../content/data.json";
 
-const [globalEntry] = await getCollection('global');
-const globalData = globalEntry?.data;
-const initialData = JSON.stringify(globalData);
+import Layout from "../layouts/Layout.astro";
+const initialData = JSON.stringify(globalData); // Daten im Frontmatter als JSON-String
 ---
 
 <Layout>
