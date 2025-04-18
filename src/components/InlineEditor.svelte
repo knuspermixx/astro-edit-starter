@@ -24,7 +24,7 @@ let { content, filePath, dataKey } = $props<{
   
       status = 'Speichere...';
       try {
-        const response = await fetch(`https://api.github.com/repos/knuspermixx/editable-astro/contents/${filePath}`, {
+        const response = await fetch(`https://api.github.com/repos/knuspermixx/astro-edit-starter/contents/${filePath}`, {
           method: 'GET',
           headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github.v3+json' },
         });
@@ -41,7 +41,7 @@ let { content, filePath, dataKey } = $props<{
   
         const updatedContent = JSON.stringify(existingContent, null, 2);
   
-        const putResponse = await fetch(`https://api.github.com/repos/knuspermixx/editable-astro/contents/${filePath}`, {
+        const putResponse = await fetch(`https://api.github.com/repos/knuspermixx/astro-edit-starter/contents/${filePath}`, {
           method: 'PUT',
           headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github.v3+json' },
           body: JSON.stringify({

@@ -55,7 +55,7 @@ const slug = Astro.url.pathname.split('/').filter(Boolean).pop() || '';
           statusDiv.textContent = 'Veröffentliche...';
 
           try {
-            const response = await fetch(`https://api.github.com/repos/knuspermixx/editable-astro/contents/${filePath}`, {
+            const response = await fetch(`https://api.github.com/repos/knuspermixx/astro-edit-starter/contents/${filePath}`, {
               method: 'GET',
               headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github.v3+json' },
             });
@@ -67,7 +67,7 @@ const slug = Astro.url.pathname.split('/').filter(Boolean).pop() || '';
             const frontmatter = frontmatterMatch ? frontmatterMatch[1] : '';
             const updatedContent = `${frontmatter}\n${content}`;
 
-            const putResponse = await fetch(`https://api.github.com/repos/knuspermixx/editable-astro/contents/${filePath}`, {
+            const putResponse = await fetch(`https://api.github.com/repos/knuspermixx/astro-edit-starter/contents/${filePath}`, {
               method: 'PUT',
               headers: { Authorization: `token ${pat}`, Accept: 'application/vnd.github.v3+json' },
               body: JSON.stringify({
