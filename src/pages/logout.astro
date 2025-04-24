@@ -3,8 +3,7 @@ import Layout from "../layouts/Layout.astro";
 ---
 
 <Layout>
-  <button id="login">Click to Login</button>
-  <p>Schau in die Browser-Konsole für Logs.</p>
+  <p>Du wirst ausgeloggt...</p>
 </Layout>
 
 <script type="module">
@@ -19,14 +18,10 @@ const auth0 = await createAuth0Client({
 });
 
 window.addEventListener("DOMContentLoaded", async () => {
-  try {
-    await auth0.handleRedirectCallback();
-  } catch (e) {
-    // ignore
-  }
-  const user = await auth0.getUser();
-  if (!user) {
-    await auth0.loginWithRedirect();
-  }
+  await auth0.logout({
+    logoutParams: {
+      returnTo: "https://knuspermixx.github.io/astro-edit-starter",
+    }
+  });
 });
 </script>

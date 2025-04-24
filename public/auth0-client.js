@@ -1,13 +1,11 @@
 import { createAuth0Client } from "@auth0/auth0-spa-js";
 
-console.log("Auth0 Client Loaded");
-
 async function main() {
   const auth0 = await createAuth0Client({
     domain: "dev-xt5nci8m2zxscg23.eu.auth0.com",
     clientId: "8XDuHzBPEG4eOlPTdTvzjRU0vUtZ9O4a",
     authorizationParams: {
-      redirect_uri: "https://localhost:4321/astro-edit-starter/",
+      redirect_uri: "http://localhost:4321/astro-edit-starter/",
     },
   });
 
