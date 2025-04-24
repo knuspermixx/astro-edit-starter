@@ -1,14 +1,97 @@
 ---
 import "../styles/global.css";
+import { base } from 'astro:config/client'; // Importiere base für Links
 ---
 
 <html lang="de">
-  <head>
-    <meta charset="UTF-8">
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>Landing Page</title>
-  </head>
-  <body class="font-sans bg-white text-gray-900">
-    <slot />
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <title>Landing Page</title>
+</head>
+<body class="font-sans bg-white text-gray-900">
+
+  <nav class="py-6 border-b border-gray-200 bg-white sticky top-0 z-40">
+    <div class="container mx-auto px-6 flex items-center justify-between">
+      <div class="text-xl font-bold tracking-tight" contenteditable="false">Logo</div>
+      <div class="hidden md:flex space-x-8 items-center"> {/* items-center hinzugefügt */}
+        <a href={base + "/#hero"} class="hover:underline">Home</a>
+        <a href={base + "/#about"} class="hover:underline">Über uns</a>
+        <a href={base + "/#features"} class="hover:underline">Features</a>
+        <a href={base + "/#contact"} class="hover:underline">Kontakt</a>
+        {/* Auth Status Bereich */}
+        <div id="auth-status" class="flex items-center space-x-4">
+          <span id="user-info" class="hidden text-sm"></span>
+          <button id="login-button" class="bg-blue-500 hover:bg-blue-700 text-white text-sm py-1 px-3 rounded">
+            Login
+          </button>
+          <button id="logout-button" class="hidden bg-red-500 hover:bg-red-700 text-white text-sm py-1 px-3 rounded">
+            Logout
+          </button>
+        </div>
+      </div>
+       {/* Mobile Menu Button (Optional, falls benötigt) */}
+       <div class="md:hidden">
+         {/* Hier könnte ein Button für ein mobiles Menü hin */}
+       </div>
+    </div>
+  </nav>
+
+  <slot /> 
+
+  <script type="module">
+    import { initAuth, login, logout } from '/src/auth';
+
+    const loginButton = document.getElementById('login-button');
+    const logoutButton = document.getElementById('logout-button');
+    const userInfo = document.getElementById('user-info');
+
+    function updateUI(isAuthenticated, user) {
+      if (isAuthenticated && user) {
+        userInfo.textContent = `Angemeldet als: ${user.name || user.email || 'Benutzer'}`;
+        userInfo.classList.remove('hidden');
+        logoutButton.classList.remove('hidden');
+        loginButton.classList.add('hidden');
+      } else {
+        userInfo.classList.add('hidden');
+        logoutButton.classList.add('hidden');
+        loginButton.classList.remove('hidden');
+      }
+    }
+
+    loginButton?.addEventListener('click', async () => {
+      console.log("Login button clicked");
+      await login();
+    });
+
+    logoutButton?.addEventListener('click', async () => {
+      console.log("Logout button clicked");
+      await logout();
+      updateUI(false, null);
+    });
+
+    async function initializeApp() {
+        console.log("Initializing app authentication...");
+        try {
+            const { authenticated, user } = await initAuth();
+            updateUI(authenticated, user);
+            if (authenticated) {
+                // const token = await getToken();
+                // console.log("Access Token:", token ? token.substring(0, 10) + '...' : 'Not available');
+                // Hier könntest du den Token speichern oder für API-Aufrufe nutzen
+            }
+        } catch (error) {
+            console.error("Failed to initialize authentication:", error);
+            updateUI(false, null);
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    } else {
+        initializeApp();
+    }
+
+  </script>
+</body>
 </html>
